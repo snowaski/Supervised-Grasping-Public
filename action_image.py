@@ -28,7 +28,7 @@ def draw_circle(radius, x, y):
     for r in range(radius*2+1):
         for c in range(radius*2+1):
             if x < 640 and y < 512 and x >= 0 and y >= 0:
-                img[y-radius+r][x-radius+c] = 1
+                img[y-radius+r][x-radius+c] = 255
 
     return img
 
