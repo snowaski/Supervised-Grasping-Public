@@ -4,3 +4,5 @@ model.py
 model_old.py
 T2R.py
 tensor2robot/
+images.tfrecords
+data/
