@@ -1,0 +1,9 @@
+rule infer
+  command = /usr/local/opt/python/bin/python3.7 -m pytype.single --imports_info $imports --module-name $module -V 3.7 -o $out --no-report-errors --nofail --quick $in
+  description = infer $module
+rule check
+  command = /usr/local/opt/python/bin/python3.7 -m pytype.single --imports_info $imports --module-name $module -V 3.7 -o $out --analyze-annotated --nofail --quick $in
+  description = check $module
+build /Users/snowaski/Grapsing/.pytype/pyi/action_image.pyi: check /Users/snowaski/Grapsing/action_image.py
+  imports = /Users/snowaski/Grapsing/.pytype/imports/action_image.imports
+  module = action_image

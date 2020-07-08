@@ -6,3 +6,5 @@ T2R.py
 tensor2robot/
 images.tfrecords
 data/
+test.tfrecord
+train.tfrecord
