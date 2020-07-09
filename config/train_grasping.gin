@@ -2,14 +2,19 @@ include 'config/common_imports.gin'
 
 ######## INPUT GENERATION
 
+TRAIN_DATA="train.tfrecord"
+EVAL_DATA="test.tfrecord"
+
 TRAIN_BATCH_SIZE = 8
 EVAL_BATCH_SIZE = 8
 
-TRAIN_INPUT_GENERATOR = @train_input_generator/DefaultRandomInputGenerator()
-train_input_generator/DefaultRandomInputGenerator.batch_size = %TRAIN_BATCH_SIZE
+TRAIN_INPUT_GENERATOR = @train_input_generator/DefaultRecordInputGenerator()
+train_input_generator/DefaultRecordInputGenerator.file_patterns = %TRAIN_DATA
+train_input_generator/DefaultRecordInputGenerator.batch_size = %TRAIN_BATCH_SIZE
 
-EVAL_INPUT_GENERATOR = @eval_input_generator/DefaultRandomInputGenerator()
-eval_input_generator/DefaultRandomInputGenerator.batch_size = %EVAL_BATCH_SIZE
+EVAL_INPUT_GENERATOR = @eval_input_generator/DefaultRecordInputGenerator()
+eval_input_generator/DefaultRecordInputGenerator.file_patterns = %EVAL_DATA
+eval_input_generator/DefaultRecordInputGenerator.batch_size = %EVAL_BATCH_SIZE
 
 #######################################
 # MODEL
