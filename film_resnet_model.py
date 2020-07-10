@@ -578,8 +578,7 @@ class Model(object):
                 # https://www.tensorflow.org/performance/performance_guide#data_formats
                 inputs = tf.transpose(a=inputs, perm=[0, 3, 1, 2])
 
-            img1 = tf.cast(inputs.RGB, tf.float32)
-            img1 = conv2d_fixed_padding(inputs=img1,
+            img1 = conv2d_fixed_padding(inputs=inputs.RGB,
                                         filters=filters[0],
                                         kernel_size=self.kernel_size,
                                         strides=self.conv_stride,
@@ -587,8 +586,7 @@ class Model(object):
                                         weight_decay=self.weight_decay)
             img1 = tf.identity(img1, 'initial_conv1')
 
-            img2 = tf.cast(inputs.Feature_RGB, tf.float32)
-            img2 = conv2d_fixed_padding(inputs=img2,
+            img2 = conv2d_fixed_padding(inputs=inputs.Feature_RGB,
                                         filters=filters[1],
                                         kernel_size=self.kernel_size,
                                         strides=self.conv_stride,
@@ -596,11 +594,7 @@ class Model(object):
                                         weight_decay=self.weight_decay)
             img2 = tf.identity(img2, 'initial_conv2')
 
-            img3 = tf.map_fn(lambda x: tf.ensure_shape(
-                tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 3)),
-                             inputs.Depth,
-                             dtype=tf.float32)
-            img3 = conv2d_fixed_padding(inputs=img3,
+            img3 = conv2d_fixed_padding(inputs=inputs.Depth,
                                         filters=filters[2][0],
                                         kernel_size=self.kernel_size,
                                         strides=self.conv_stride,
@@ -608,11 +602,7 @@ class Model(object):
                                         weight_decay=self.weight_decay)
             img3 = tf.identity(img3, 'initial_conv3')
 
-            img4 = tf.map_fn(lambda x: tf.ensure_shape(
-                tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 3)),
-                             inputs.Feature_Depth,
-                             dtype=tf.float32)
-            img4 = conv2d_fixed_padding(inputs=img4,
+            img4 = conv2d_fixed_padding(inputs=inputs.Feature_Depth,
                                         filters=filters[3],
                                         kernel_size=self.kernel_size,
                                         strides=self.conv_stride,
