@@ -558,20 +558,10 @@ class Model(object):
     Returns:
       A logits Tensor with shape [<batch_size>, self.num_classes].
     """
-        # Generate FiLM conditioning.
-        # if film_generator_input is not None and film_generator_fn is None:
-        #   raise ValueError(
-        #       'film_generator_input is provided but film_generator_fn is not '
-        #       'specified.')
-        # if film_generator_fn:
-        #   filter_sizes = [
-        #       self.num_filters * (2**i) for i in range(len(self.block_sizes))]
-        #   film_gamma_betas = film_generator_fn(
-        #       film_generator_input, self.block_sizes, filter_sizes)
-        # else:
-        #   film_gamma_betas = [[None]*num_blocks for num_blocks in self.block_sizes]
         filters = [4, 8, [256, 32, 32], 8]
-        inputs = [inputs.RGB, inputs.Feature_RGB, inputs.Depth, inputs.Feature_Depth]
+        inputs = [
+            inputs.RGB, inputs.Feature_RGB, inputs.Depth, inputs.Feature_Depth
+        ]
         with self._model_variable_scope():
             if self.data_format == 'channels_first':
                 # Convert the inputs from channels_last (NHWC) to channels_first (NCHW).
@@ -583,154 +573,52 @@ class Model(object):
                 if type(f) is list:
                     f = f[0]
                 img = conv2d_fixed_padding(inputs=inputs[i],
-                                            filters=filters[0],
-                                            kernel_size=self.kernel_size,
-                                            strides=self.conv_stride,
-                                            data_format=self.data_format,
-                                            weight_decay=self.weight_decay)
+                                           filters=f,
+                                           kernel_size=self.kernel_size,
+                                           strides=self.conv_stride,
+                                           data_format=self.data_format,
+                                           weight_decay=self.weight_decay)
                 imgs.append(tf.identity(img, f'initial_conv{i}'))
-
-            img2 = conv2d_fixed_padding(inputs=inputs.Feature_RGB,
-                                        filters=filters[1],
-                                        kernel_size=self.kernel_size,
-                                        strides=self.conv_stride,
-                                        data_format=self.data_format,
-                                        weight_decay=self.weight_decay)
-            img2 = tf.identity(img2, 'initial_conv2')
-
-            img3 = conv2d_fixed_padding(inputs=inputs.Depth,
-                                        filters=filters[2][0],
-                                        kernel_size=self.kernel_size,
-                                        strides=self.conv_stride,
-                                        data_format=self.data_format,
-                                        weight_decay=self.weight_decay)
-            img3 = tf.identity(img3, 'initial_conv3')
-
-            img4 = conv2d_fixed_padding(inputs=inputs.Feature_Depth,
-                                        filters=filters[3],
-                                        kernel_size=self.kernel_size,
-                                        strides=self.conv_stride,
-                                        data_format=self.data_format,
-                                        weight_decay=self.weight_decay)
-            img4 = tf.identity(img4, 'initial_conv4')
 
             # We do not include batch normalization or activation functions in V2
             # for the initial conv1 because the first ResNet unit will perform these
             # for both the shortcut and non-shortcut paths as part of the first
             # block's projection. Cf. Appendix of [2].
             if self.resnet_version == 1:
-                img1 = batch_norm(img1, training, self.data_format)
-                img1 = tf.nn.relu(img1)
-
-                img2 = batch_norm(img2, training, self.data_format)
-                img2 = tf.nn.relu(img2)
-
-                img3 = batch_norm(img3, training, self.data_format)
-                img3 = tf.nn.relu(img3)
-
-                img4 = batch_norm(img4, training, self.data_format)
-                img4 = tf.nn.relu(img4)
+                for i, img in enumerate(imgs):
+                    imgs[i] = batch_norm(img, training, self.data_format)
+                    imgs[i] = tf.nn.relu(img)
 
             if self.first_pool_size:
-                img1 = tf.layers.max_pooling2d(inputs=img1,
-                                               pool_size=self.first_pool_size,
-                                               strides=self.first_pool_stride,
-                                               padding='SAME',
-                                               data_format=self.data_format)
-                img1 = tf.identity(img1, 'initial_max_pool1')
-
-                img2 = tf.layers.max_pooling2d(inputs=img2,
-                                               pool_size=self.first_pool_size,
-                                               strides=self.first_pool_stride,
-                                               padding='SAME',
-                                               data_format=self.data_format)
-                img2 = tf.identity(img2, 'initial_max_pool2')
-
-                img3 = tf.layers.max_pooling2d(inputs=img3,
-                                               pool_size=self.first_pool_size,
-                                               strides=self.first_pool_stride,
-                                               padding='SAME',
-                                               data_format=self.data_format)
-                img3 = tf.identity(img3, 'initial_max_pool3')
-
-                img4 = tf.layers.max_pooling2d(inputs=img4,
-                                               pool_size=self.first_pool_size,
-                                               strides=self.first_pool_stride,
-                                               padding='SAME',
-                                               data_format=self.data_format)
-                img4 = tf.identity(img4, 'initial_max_pool4')
+                for i, img in enumerate(imgs):
+                    img = tf.layers.max_pooling2d(
+                        inputs=img,
+                        pool_size=self.first_pool_size,
+                        strides=self.first_pool_stride,
+                        padding='SAME',
+                        data_format=self.data_format)
+                    imgs[i] = tf.identity(img, f'initial_max_pool{i}')
 
             for i, num_blocks in enumerate(self.block_sizes):
-                # num_filters = self.num_filters * (2**i + 1)
-
-                # Validate FiLM inputs.
-                # if film_gamma_betas[i] is None:
-                #   continue
-                # if len(film_gamma_betas[i]) != num_blocks:
-                #   raise ValueError(
-                #       'Got {} FiLM vectors for block {}, expected {}'.format(
-                #           len(film_gamma_betas[i]), i, num_blocks))
-                # for film_gamma_beta in film_gamma_betas[i]:
-                #   if film_gamma_beta is None:
-                #     continue
-                #   film_shape = film_gamma_beta.get_shape().as_list()
-                #   if len(film_shape) != 2:
-                #     raise ValueError('FILM shape is %s but is expected to be 2-D' %
-                #                      str(film_shape))
-                #   if film_shape[-1] != 2*num_filters:
-                #     raise ValueError(
-                #         'FILM shape is %s but final dimension should be %d' %
-                #         (str(film_shape), 2*num_filters))
-                img1 = block_layer(inputs=img1,
-                                   filters=(filters[0] * (2**i)),
-                                   bottleneck=self.bottleneck,
-                                   block_fn=self.block_fn,
-                                   blocks=num_blocks,
-                                   strides=self.block_strides[i],
-                                   training=training,
-                                   name='rgb_block_layer{}'.format(i + 1),
-                                   data_format=self.data_format,
-                                   weight_decay=self.weight_decay,
-                                   film_gamma_betas=None)
-
-                img2 = block_layer(inputs=img2,
-                                   filters=(filters[1] * (2**i)),
-                                   bottleneck=self.bottleneck,
-                                   block_fn=self.block_fn,
-                                   blocks=num_blocks,
-                                   strides=self.block_strides[i],
-                                   training=training,
-                                   name='feat_rgb_block_layer{}'.format(i + 1),
-                                   data_format=self.data_format,
-                                   weight_decay=self.weight_decay,
-                                   film_gamma_betas=None)
-
-                img3 = block_layer(inputs=img3,
-                                   filters=(filters[2][i + 1]),
-                                   bottleneck=self.bottleneck,
-                                   block_fn=self.block_fn,
-                                   blocks=num_blocks,
-                                   strides=self.block_strides[i],
-                                   training=training,
-                                   name='depth_block_layer{}'.format(i + 1),
-                                   data_format=self.data_format,
-                                   weight_decay=self.weight_decay,
-                                   film_gamma_betas=None)
-
-                img4 = block_layer(inputs=img4,
-                                   filters=(filters[3] * (2**i)),
-                                   bottleneck=self.bottleneck,
-                                   block_fn=self.block_fn,
-                                   blocks=num_blocks,
-                                   strides=self.block_strides[i],
-                                   training=training,
-                                   name='feat_depth_block_layer{}'.format(i +
+                for j, img in enumerate(imgs):
+                    if type(filters[j]) is list:
+                        f = filters[j][i + 1]
+                    else:
+                        f = filters[j] * (2**i)
+                    imgs[j] = block_layer(inputs=img,
+                                          filters=f,
+                                          bottleneck=self.bottleneck,
+                                          block_fn=self.block_fn,
+                                          blocks=num_blocks,
+                                          strides=self.block_strides[i],
+                                          training=training,
+                                          name='rgb_block_layer{}'.format(i +
                                                                           1),
-                                   data_format=self.data_format,
-                                   weight_decay=self.weight_decay,
-                                   film_gamma_betas=None)
+                                          data_format=self.data_format,
+                                          weight_decay=self.weight_decay,
+                                          film_gamma_betas=None)
 
-            inputs = tf.concat([img1, img2, img3, img4], axis=3)
+            inputs = tf.concat(imgs, axis=3)
 
             # Only apply the BN and ReLU for model that does pre_activation in each
             # building/bottleneck block, eg resnet V2.
@@ -739,64 +627,26 @@ class Model(object):
                 inputs = tf.nn.relu(inputs)
             inputs = tf.identity(inputs, 'pre_final_tower')
 
-            inputs = block_layer(inputs=inputs,
-                                 filters=64,
-                                 bottleneck=self.bottleneck,
-                                 block_fn=self.block_fn,
-                                 blocks=3,
-                                 strides=self.block_strides[i],
-                                 training=training,
-                                 name='tower_block_layer1',
-                                 data_format=self.data_format,
-                                 weight_decay=self.weight_decay,
-                                 film_gamma_betas=None)
+            for i in range(2):
+                inputs = block_layer(inputs=inputs,
+                                     filters=64,
+                                     bottleneck=self.bottleneck,
+                                     block_fn=self.block_fn,
+                                     blocks=3,
+                                     strides=self.block_strides[i],
+                                     training=training,
+                                     name=f'tower_block_layer{i}',
+                                     data_format=self.data_format,
+                                     weight_decay=self.weight_decay,
+                                     film_gamma_betas=None)
 
-            inputs = block_layer(inputs=inputs,
-                                 filters=64,
-                                 bottleneck=self.bottleneck,
-                                 block_fn=self.block_fn,
-                                 blocks=3,
-                                 strides=self.block_strides[i],
-                                 training=training,
-                                 name='tower_block_layer2',
-                                 data_format=self.data_format,
-                                 weight_decay=self.weight_decay,
-                                 film_gamma_betas=None)
-
-            inputs = conv2d_fixed_padding(inputs=inputs,
-                                          filters=1,
-                                          kernel_size=8,
-                                          strides=self.conv_stride,
-                                          data_format=self.data_format,
-                                          weight_decay=self.weight_decay)
-
-            inputs = conv2d_fixed_padding(inputs=inputs,
-                                          filters=1,
-                                          kernel_size=8,
-                                          strides=self.conv_stride,
-                                          data_format=self.data_format,
-                                          weight_decay=self.weight_decay)
-
-            inputs = conv2d_fixed_padding(inputs=inputs,
-                                          filters=1,
-                                          kernel_size=8,
-                                          strides=self.conv_stride,
-                                          data_format=self.data_format,
-                                          weight_decay=self.weight_decay)
-
-            inputs = conv2d_fixed_padding(inputs=inputs,
-                                          filters=1,
-                                          kernel_size=8,
-                                          strides=self.conv_stride,
-                                          data_format=self.data_format,
-                                          weight_decay=self.weight_decay)
-
-            inputs = conv2d_fixed_padding(inputs=inputs,
-                                          filters=1,
-                                          kernel_size=8,
-                                          strides=self.conv_stride,
-                                          data_format=self.data_format,
-                                          weight_decay=self.weight_decay)
+            for _ in range(5):
+                inputs = conv2d_fixed_padding(inputs=inputs,
+                                              filters=1,
+                                              kernel_size=8,
+                                              strides=self.conv_stride,
+                                              data_format=self.data_format,
+                                              weight_decay=self.weight_decay)
 
             inputs = tf.squeeze(inputs)
             inputs = tf.expand_dims(inputs, axis=1)

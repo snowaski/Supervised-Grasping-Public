@@ -140,18 +140,19 @@ class GraspingModel(abstract_model.AbstractT2RModel):
         loss = self._embedding_loss_fn(labels.grasp_success_spec,
                                        inference_outputs["grasp_success"])
         # inference_outputs['grasp_success'] = tf.cast(tf.math.round(inference_outputs['grasp_success']), tf.int64)
-        inference_outputs['grasp_success'] = tf.cast(inference_outputs['grasp_success'], tf.int64)
+        inference_outputs['grasp_success'] = tf.cast(
+            inference_outputs['grasp_success'], tf.int64)
         return loss, inference_outputs
 
     def add_summaries(self,
-                    features,
-                    labels,
-                    inference_outputs,
-                    train_loss,
-                    train_outputs,
-                    mode,
-                    config = None,
-                    params = None):
+                      features,
+                      labels,
+                      inference_outputs,
+                      train_loss,
+                      train_outputs,
+                      mode,
+                      config=None,
+                      params=None):
         """Add summaries to the graph.
         Having a central place to add all summaries to the graph is helpful in order
         to compose models. For example, if an inference_network_fn is used within
@@ -181,27 +182,30 @@ class GraspingModel(abstract_model.AbstractT2RModel):
         """
         if not self.use_summaries(params):
             return
-        
+
         tf.summary.histogram('predicted', train_outputs['grasp_success'])
 
-        acc = tf.contrib.metrics.accuracy(train_outputs["grasp_success"], labels["grasp_success_spec"])
+        acc = tf.contrib.metrics.accuracy(train_outputs["grasp_success"],
+                                          labels["grasp_success_spec"])
 
         tf.summary.scalar('accuracy', acc)
 
         tf.summary.image('RGB', features['imgs/RGB'], max_outputs=8)
-        tf.summary.image('Feature_RGB', features['imgs/Feature_RGB'], max_outputs=8)
+        tf.summary.image('Feature_RGB',
+                         features['imgs/Feature_RGB'],
+                         max_outputs=8)
         tf.summary.image('Depth', features['imgs/Depth'])
         tf.summary.image('Feature_Depth', features['imgs/Feature_Depth'])
 
     def model_eval_fn(self,
-                    features,
-                    labels,
-                    inference_outputs,
-                    train_loss,
-                    train_outputs,
-                    mode,
-                    config = None,
-                    params = None):
+                      features,
+                      labels,
+                      inference_outputs,
+                      train_loss,
+                      train_outputs,
+                      mode,
+                      config=None,
+                      params=None):
         eval_mse = tf.metrics.mean_squared_error(
             labels=labels['grasp_success_spec'],
             predictions=inference_outputs['grasp_success'],
@@ -219,10 +223,9 @@ class GraspingModel(abstract_model.AbstractT2RModel):
             predictions=predictions_rounded,
             name='eval_accuracy')
 
-        eval_recall = tf.metrics.recall(
-            labels=labels['grasp_success_spec'],
-            predictions=predictions_rounded,
-            name='eval_recall')
+        eval_recall = tf.metrics.recall(labels=labels['grasp_success_spec'],
+                                        predictions=predictions_rounded,
+                                        name='eval_recall')
 
         # eval_f1 = eval_precision / eval_recall
 

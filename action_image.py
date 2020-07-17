@@ -57,16 +57,17 @@ def _int64_feature(value):
     """Returns an int64_list from a bool / enum / int / uint."""
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
+
 def project_points_to_image_space(p1, p2, p3):
     D = [0, 0, 0.0, 0.0, 0]
     dist_coeffs = np.array(D).reshape(5, 1).astype(np.float32)
-    points = np.array(
-        [p1, p2, p3])
-    points, _ = cv2.projectPoints(points, np.eye(3), np.zeros(3, ),
-                                    cipm, dist_coeffs)
+    points = np.array([p1, p2, p3])
+    points, _ = cv2.projectPoints(points, np.eye(3), np.zeros(3, ), cipm,
+                                  dist_coeffs)
     points = points.astype('int32')
 
     return points
+
 
 def draw_feature_img(points):
     img = []
@@ -74,33 +75,47 @@ def draw_feature_img(points):
         img.append(draw_circle(6, points[i][0][0], points[i][0][1], 255))
     return np.concatenate(img, axis=2)
 
+
 def crop_imgs(points, feature_rgb, feature_depth, rgbd):
     center_x = points[0][0][0]
     center_y = points[0][0][1]
     feature_rgb = crop_to_target(center_x, center_y, feature_rgb, (128, 128))
     feature_depth = crop_to_target(center_x, center_y, feature_depth,
-                                (128, 128))
+                                   (128, 128))
     rgbd = crop_to_target(center_x, center_y, rgbd, (128, 128))
 
     return feature_rgb, feature_depth, rgbd
+
 
 def create_depth_img(rgbd):
     depth = tf.expand_dims(rgbd[:, :, 3], axis=2)
     depth = np.concatenate(
         [depth, np.zeros(depth.shape),
-        np.zeros(depth.shape)], axis=2)
+         np.zeros(depth.shape)], axis=2)
 
     return depth
 
+
 def create_photometric_distortion_with_noise(rgbd):
     features = np.expand_dims(rgbd[:, :, :3], axis=0) / 256
-    features = image_transformations.ApplyPhotometricImageDistortions(features, random_brightness=True, random_saturation=True, random_hue=True, random_noise_level=0.05)
+    features = image_transformations.ApplyPhotometricImageDistortions(
+        features,
+        random_brightness=True,
+        random_saturation=True,
+        random_hue=True,
+        random_noise_level=0.05)
     return features * 256
+
 
 def create_photometric_distortion_no_noise(rgbd):
     features = np.expand_dims(rgbd[:, :, :3], axis=0) / 256
-    features = image_transformations.ApplyPhotometricImageDistortions(features, random_brightness=True, random_saturation=True, random_hue=True)
+    features = image_transformations.ApplyPhotometricImageDistortions(
+        features,
+        random_brightness=True,
+        random_saturation=True,
+        random_hue=True)
     return features * 256
+
 
 def create_dataset(cipm):
     '''creates the data set
@@ -134,13 +149,16 @@ def create_dataset(cipm):
             feature_wrist = extract_array_from_string(
                 data['base_gripper_position'][i])
 
-            points = project_points_to_image_space(feature_left_finger, feature_right_finger, feature_wrist)
+            points = project_points_to_image_space(feature_left_finger,
+                                                   feature_right_finger,
+                                                   feature_wrist)
 
             # draw action images
             feature_rgb = draw_feature_img(points)
             feature_depth = draw_feature_img(points)
 
-            feature_rgb, feature_depth, rgbd = crop_imgs(points, feature_rgb, feature_depth, rgbd)
+            feature_rgb, feature_depth, rgbd = crop_imgs(
+                points, feature_rgb, feature_depth, rgbd)
 
             depth = create_depth_img(rgbd)
 
