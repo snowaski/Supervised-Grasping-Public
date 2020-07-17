@@ -11,7 +11,6 @@ from tensor2robot.preprocessors import image_transformations, abstract_preproces
 @gin.configurable
 class GraspingPreprocessor(abstract_preprocessor.AbstractPreprocessor):
     def _preprocess_fn(self, features, labels, mode):
-        # features = image_transformations.ApplyPhotometricImageDistortions(features, random_brightness=True, random_hue=True, random_contrast=True)
         features.imgs.RGB = tf.cast(features.imgs.RGB, tf.float32)
         features.imgs.Feature_RGB = tf.cast(features.imgs.Feature_RGB,
                                             tf.float32)
@@ -140,4 +139,99 @@ class GraspingModel(abstract_model.AbstractT2RModel):
                        params=None):
         loss = self._embedding_loss_fn(labels.grasp_success_spec,
                                        inference_outputs["grasp_success"])
-        return loss
+        # inference_outputs['grasp_success'] = tf.cast(tf.math.round(inference_outputs['grasp_success']), tf.int64)
+        inference_outputs['grasp_success'] = tf.cast(inference_outputs['grasp_success'], tf.int64)
+        return loss, inference_outputs
+
+    def add_summaries(self,
+                    features,
+                    labels,
+                    inference_outputs,
+                    train_loss,
+                    train_outputs,
+                    mode,
+                    config = None,
+                    params = None):
+        """Add summaries to the graph.
+        Having a central place to add all summaries to the graph is helpful in order
+        to compose models. For example, if an inference_network_fn is used within
+        a while loop no summaries can be added. This function will allow to add
+        summaries after the while loop has been processed.
+        Args:
+        features: This is the first item returned from the input_fn and parsed by
+            tensorspec_utils.validate_and_pack. A spec_structure which fulfills the
+            requirements of the self.get_feature_specification.
+        labels: This is the second item returned from the input_fn and parsed by
+            tensorspec_utils.validate_and_pack. A spec_structure which fulfills the
+            requirements of the self.get_feature_specification.
+        inference_outputs: A dict containing the output tensors of
+            model_inference_fn.
+        train_loss: The final loss from model_train_fn.
+        train_outputs: A dict containing the output tensors (dict) of
+            model_train_fn.
+        mode: (ModeKeys) Specifies if this is training, evaluation or prediction.
+        config: (Optional tf.estimator.RunConfig or contrib_tpu.RunConfig) Will
+            receive what is passed to Estimator in config parameter, or the default
+            config (tf.estimator.RunConfig). Allows updating things in your model_fn
+            based on  configuration such as num_ps_replicas, or model_dir.
+        params: An optional dict of hyper parameters that will be passed into
+            input_fn and model_fn. Keys are names of parameters, values are basic
+            python types. There are reserved keys for TPUEstimator, including
+            'batch_size'.
+        """
+        if not self.use_summaries(params):
+            return
+        
+        tf.summary.histogram('predicted', train_outputs['grasp_success'])
+
+        acc = tf.contrib.metrics.accuracy(train_outputs["grasp_success"], labels["grasp_success_spec"])
+
+        tf.summary.scalar('accuracy', acc)
+
+        tf.summary.image('RGB', features['imgs/RGB'], max_outputs=8)
+        tf.summary.image('Feature_RGB', features['imgs/Feature_RGB'], max_outputs=8)
+        tf.summary.image('Depth', features['imgs/Depth'])
+        tf.summary.image('Feature_Depth', features['imgs/Feature_Depth'])
+
+    def model_eval_fn(self,
+                    features,
+                    labels,
+                    inference_outputs,
+                    train_loss,
+                    train_outputs,
+                    mode,
+                    config = None,
+                    params = None):
+        eval_mse = tf.metrics.mean_squared_error(
+            labels=labels['grasp_success_spec'],
+            predictions=inference_outputs['grasp_success'],
+            name='eval_mse')
+
+        predictions_rounded = tf.round(inference_outputs['grasp_success'])
+
+        eval_precision = tf.metrics.precision(
+            labels=labels['grasp_success_spec'],
+            predictions=predictions_rounded,
+            name='eval_precision')
+
+        eval_accuracy = tf.metrics.accuracy(
+            labels=labels['grasp_success_spec'],
+            predictions=predictions_rounded,
+            name='eval_accuracy')
+
+        eval_recall = tf.metrics.recall(
+            labels=labels['grasp_success_spec'],
+            predictions=predictions_rounded,
+            name='eval_recall')
+
+        # eval_f1 = eval_precision / eval_recall
+
+        metric_fn = {
+            'eval_mse': eval_mse,
+            'eval_precision': eval_precision,
+            'eval_accuracy': eval_accuracy,
+            'eval_recall': eval_recall
+            # 'eval_f1': eval_f1
+        }
+
+        return metric_fn

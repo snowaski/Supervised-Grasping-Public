@@ -571,20 +571,24 @@ class Model(object):
         # else:
         #   film_gamma_betas = [[None]*num_blocks for num_blocks in self.block_sizes]
         filters = [4, 8, [256, 32, 32], 8]
+        inputs = [inputs.RGB, inputs.Feature_RGB, inputs.Depth, inputs.Feature_Depth]
         with self._model_variable_scope():
             if self.data_format == 'channels_first':
                 # Convert the inputs from channels_last (NHWC) to channels_first (NCHW).
                 # This provides a large performance boost on GPU. See
                 # https://www.tensorflow.org/performance/performance_guide#data_formats
                 inputs = tf.transpose(a=inputs, perm=[0, 3, 1, 2])
-
-            img1 = conv2d_fixed_padding(inputs=inputs.RGB,
-                                        filters=filters[0],
-                                        kernel_size=self.kernel_size,
-                                        strides=self.conv_stride,
-                                        data_format=self.data_format,
-                                        weight_decay=self.weight_decay)
-            img1 = tf.identity(img1, 'initial_conv1')
+            imgs = []
+            for i, f in enumerate(filters):
+                if type(f) is list:
+                    f = f[0]
+                img = conv2d_fixed_padding(inputs=inputs[i],
+                                            filters=filters[0],
+                                            kernel_size=self.kernel_size,
+                                            strides=self.conv_stride,
+                                            data_format=self.data_format,
+                                            weight_decay=self.weight_decay)
+                imgs.append(tf.identity(img, f'initial_conv{i}'))
 
             img2 = conv2d_fixed_padding(inputs=inputs.Feature_RGB,
                                         filters=filters[1],
@@ -794,13 +798,8 @@ class Model(object):
                                           data_format=self.data_format,
                                           weight_decay=self.weight_decay)
 
-            # assert(False), f'{inputs}'
-
-            assert (tf.is_tensor(inputs)), f'{inputs} is not a tensor'
-            assert (
-                not type(inputs) is tuple), f'{inputs} is a tuple. Fix that'
-            # inputs = tf.convert_to_tensor(inputs)
-            inputs = tf.reshape(tf.squeeze(inputs), (8, 1))
-
-            # assert(False), f'blah: {tf.nn.sigmoid(inputs)}'
-            return tf.nn.sigmoid(inputs)
+            inputs = tf.squeeze(inputs)
+            inputs = tf.expand_dims(inputs, axis=1)
+            inputs = tf.nn.sigmoid(inputs)
+            inputs = tf.identity(inputs, 'predictions')
+            return inputs
