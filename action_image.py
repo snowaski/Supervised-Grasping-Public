@@ -8,22 +8,55 @@ from tensor2robot.preprocessors import image_transformations
 from matplotlib import pyplot as plt
 
 
+# def crop_to_target(t_x, t_y, img, dims):
+#     '''crop image around a point'''
+#     height, width, _ = img.shape
+#     crop_height, crop_width = dims
+#     crop_width //= 2
+#     crop_height //= 2
+
+#     if t_x + crop_width > width:
+#         off = t_x + crop_width - width
+#         t_x -= off
+#     if t_y + crop_height > height:
+#         off = t_y + crop_height - height
+#         t_y -= off
+#     if t_x - crop_width < 0:
+#         off = crop_width - t_x
+#         t_x += off
+#     if t_y - crop_height < 0:
+#         off = crop_height - t_y
+#         t_y += off
+
+#     return tf.image.crop_to_bounding_box(img, t_y - crop_height, t_x - crop_width, dims[0],
+#                                          dims[1])
+
 def crop_to_target(t_x, t_y, img, dims):
-    '''crop image around a point'''
+    """Crops the input image according to the dimensions.
+
+    Args:
+      t_x: the center x position to crop from.
+      t_y: the center y position to crop from.
+      img: the image to crop.
+      dims: a Tuple[int, int] representing the dimensions to crop.
+
+    Returns:
+      a tf.image.
+    """
     height, width, _ = img.shape
 
     if t_x + dims[0] // 2 > width:
-        off = t_x + 64 - width
-        t_x -= off
+      off = t_x + 64 - width
+      t_x -= off
     if t_y + dims[1] // 2 > height:
-        off = t_y + 64 - height
-        t_y -= off
+      off = t_y + 64 - height
+      t_y -= off
     if t_x - dims[0] // 2 < 0:
-        off = 64 - t_x
-        t_x += off
+      off = 64 - t_x
+      t_x += off
     if t_y - dims[1] // 2 < 0:
-        off = 64 - t_y
-        t_y += off
+      off = 64 - t_y
+      t_y += off
 
     return tf.image.crop_to_bounding_box(img, t_y - 64, t_x - 64, dims[0],
                                          dims[1])
@@ -58,10 +91,10 @@ def _int64_feature(value):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
 
-def project_points_to_image_space(p1, p2, p3):
+def project_points_to_image_space(points):
     D = [0, 0, 0.0, 0.0, 0]
     dist_coeffs = np.array(D).reshape(5, 1).astype(np.float32)
-    points = np.array([p1, p2, p3])
+    points = np.array(points)
     points, _ = cv2.projectPoints(points, np.eye(3), np.zeros(3, ), cipm,
                                   dist_coeffs)
     points = points.astype('int32')
@@ -104,7 +137,7 @@ def create_photometric_distortion_with_noise(rgbd):
         random_saturation=True,
         random_hue=True,
         random_noise_level=0.05)
-    return features * 256
+    return features[0] * 256
 
 
 def create_photometric_distortion_no_noise(rgbd):
@@ -114,7 +147,7 @@ def create_photometric_distortion_no_noise(rgbd):
         random_brightness=True,
         random_saturation=True,
         random_hue=True)
-    return features * 256
+    return features[0] * 256
 
 
 def create_dataset(cipm):
@@ -139,7 +172,7 @@ def create_dataset(cipm):
         for i, id in enumerate(data['scenario_id']):
             # extract data
             try:
-                rgbd = np.load(f'data/{d}/{id}/rgbd.data')
+                rgbd = np.load(f'data/{d}/{id}/rgbd.data')['arr_0']
             except:
                 continue
             feature_left_finger = extract_array_from_string(
@@ -148,15 +181,20 @@ def create_dataset(cipm):
                 data['right_fingertip_position'][i])
             feature_wrist = extract_array_from_string(
                 data['base_gripper_position'][i])
+            target = extract_array_from_string(data['grasp_pose_position'][i])
 
-            points = project_points_to_image_space(feature_left_finger,
+            # project points
+            points = project_points_to_image_space([feature_left_finger,
                                                    feature_right_finger,
-                                                   feature_wrist)
+                                                   feature_wrist])
+            target_points = project_points_to_image_space([target])
 
             # draw action images
             feature_rgb = draw_feature_img(points)
             feature_depth = draw_feature_img(points)
 
+            # crop images
+            target_img = crop_to_target(target_points[0][0][0], target_points[0][0][1], rgbd[:, :, :3], (128, 128))
             feature_rgb, feature_depth, rgbd = crop_imgs(
                 points, feature_rgb, feature_depth, rgbd)
 
@@ -166,17 +204,19 @@ def create_dataset(cipm):
             success = data['grasp_success'][
                 i] and not data['pieces_knocked_over'][i]
 
-            imgs.append([rgbd[:, :, :3], feature_rgb, depth, feature_depth])
+            imgs.append([rgbd[:, :, :3], feature_rgb, depth, feature_depth, target_img])
             labels.append(success)
 
             # create imgs with photometric distortion
             for _ in range(2):
                 features = create_photometric_distortion_with_noise(rgbd)
-                imgs.append([features[0], feature_rgb, depth, feature_depth])
+                target_img = create_photometric_distortion_with_noise(target_img)
+                imgs.append([features, feature_rgb, depth, feature_depth, target_img])
                 labels.append(success)
 
             features = create_photometric_distortion_no_noise(rgbd)
-            imgs.append([features[0], feature_rgb, depth, feature_depth])
+            target_img = create_photometric_distortion_no_noise(target_img)
+            imgs.append([features, feature_rgb, depth, feature_depth, target_img])
             labels.append(success)
 
     return imgs, np.array(labels)
@@ -184,9 +224,11 @@ def create_dataset(cipm):
 
 def serialize(img, lbl):
     '''converts data to TFExamples'''
-    rgb, action_rgb, depth, action_depth = img
+    rgb, action_rgb, depth, action_depth, target = img
     rgb = tf.cast(rgb, tf.uint8)
     encoded_rgb = tf.io.encode_jpeg(rgb)
+    target = tf.cast(target, tf.uint8)
+    encoded_target = tf.io.encode_jpeg(target)
     action_rgb = tf.cast(action_rgb, tf.uint8)
     encoded_action_rgb = tf.io.encode_jpeg(action_rgb)
     depth = tf.cast(depth, tf.float32)
@@ -199,6 +241,7 @@ def serialize(img, lbl):
         'feature_rgb': _bytes_feature(encoded_action_rgb),
         'depth': _bytes_feature(encoded_depth),
         'feature_depth': _bytes_feature(encoded_action_depth),
+        'target': _bytes_feature(encoded_target),
         'grasp_success': _int64_feature(lbl)
     }
 

@@ -558,9 +558,9 @@ class Model(object):
     Returns:
       A logits Tensor with shape [<batch_size>, self.num_classes].
     """
-        filters = [4, 8, [256, 32, 32], 8]
+        filters = [4, 8, [256, 32, 32], 8, 4]
         inputs = [
-            inputs.RGB, inputs.Feature_RGB, inputs.Depth, inputs.Feature_Depth
+            inputs.RGB, inputs.Feature_RGB, inputs.Depth, inputs.Feature_Depth, inputs.Target
         ]
         with self._model_variable_scope():
             if self.data_format == 'channels_first':

@@ -22,6 +22,7 @@ class GraspingPreprocessor(abstract_preprocessor.AbstractPreprocessor):
             tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 3)),
                                                 features.imgs.Feature_Depth,
                                                 dtype=tf.float32)
+        features.imgs.Target = tf.cast(features.imgs.Target, tf.float32)
         return features, labels
 
     def get_in_feature_specification(self, mode):
@@ -40,6 +41,10 @@ class GraspingPreprocessor(abstract_preprocessor.AbstractPreprocessor):
                                                       name='depth')
         spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
             shape=(), dtype=tf.string, name='feature_depth')
+        spec['imgs/Target'] = utils.ExtendedTensorSpec(shape=(128, 128, 3),
+                                                       dtype=tf.uint8,
+                                                       name='target',
+                                                       data_format='jpeg')
         return spec
 
     def get_in_label_specification(self, mode):
@@ -63,6 +68,10 @@ class GraspingPreprocessor(abstract_preprocessor.AbstractPreprocessor):
                                                       name='depth')
         spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
             shape=(128, 128, 3), dtype=tf.float32, name='feature_depth')
+        spec['imgs/Target'] = utils.ExtendedTensorSpec(shape=(128, 128, 3),
+                                                       dtype=tf.float32,
+                                                       name='target',
+                                                       data_format='jpeg')
         return spec
 
     def get_out_label_specification(self, mode):
@@ -93,6 +102,10 @@ class GraspingModel(abstract_model.AbstractT2RModel):
                                                       name='depth')
         spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
             shape=(128, 128, 3), dtype=tf.float32, name='feature_depth')
+        spec['imgs/Target'] = utils.ExtendedTensorSpec(shape=(128, 128, 3),
+                                                       dtype=tf.float32,
+                                                       name='target',
+                                                       data_format='jpeg')
         return spec
 
     def get_label_specification(self, mode):
@@ -196,6 +209,7 @@ class GraspingModel(abstract_model.AbstractT2RModel):
                          max_outputs=8)
         tf.summary.image('Depth', features['imgs/Depth'])
         tf.summary.image('Feature_Depth', features['imgs/Feature_Depth'])
+        tf.summary.image('Target', features['imgs/Target'])
 
     def model_eval_fn(self,
                       features,
@@ -227,14 +241,11 @@ class GraspingModel(abstract_model.AbstractT2RModel):
                                         predictions=predictions_rounded,
                                         name='eval_recall')
 
-        # eval_f1 = eval_precision / eval_recall
-
         metric_fn = {
             'eval_mse': eval_mse,
             'eval_precision': eval_precision,
             'eval_accuracy': eval_accuracy,
             'eval_recall': eval_recall
-            # 'eval_f1': eval_f1
         }
 
         return metric_fn
