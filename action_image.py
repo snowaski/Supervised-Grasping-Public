@@ -5,162 +5,201 @@ import cv2
 import os
 from sklearn.model_selection import train_test_split
 from tensor2robot.preprocessors import image_transformations
+from typing import List, Tuple
+
 from matplotlib import pyplot as plt
 
+CROPPED_IMAGE_SIZE = (128, 128)
 
-# def crop_to_target(t_x, t_y, img, dims):
-#     '''crop image around a point'''
-#     height, width, _ = img.shape
-#     crop_height, crop_width = dims
-#     crop_width //= 2
-#     crop_height //= 2
 
-#     if t_x + crop_width > width:
-#         off = t_x + crop_width - width
-#         t_x -= off
-#     if t_y + crop_height > height:
-#         off = t_y + crop_height - height
-#         t_y -= off
-#     if t_x - crop_width < 0:
-#         off = crop_width - t_x
-#         t_x += off
-#     if t_y - crop_height < 0:
-#         off = crop_height - t_y
-#         t_y += off
-
-#     return tf.image.crop_to_bounding_box(img, t_y - crop_height, t_x - crop_width, dims[0],
-#                                          dims[1])
-
-def crop_to_target(t_x, t_y, img, dims):
+def crop_to_target(center: np.ndarray, img: np.ndarray,
+                   dims: Tuple[int, int]) -> tf.image:
     """Crops the input image according to the dimensions.
 
     Args:
-      t_x: the center x position to crop from.
-      t_y: the center y position to crop from.
-      img: the image to crop.
-      dims: a Tuple[int, int] representing the dimensions to crop.
+        center: an array representing the center position.
+        img: the image to crop.
+        dims: a Tuple[int, int] representing the dimensions to crop.
 
     Returns:
-      a tf.image.
+        a tf.image.
     """
+    t_x, t_y = center
     height, width, _ = img.shape
+    half_crop_width = dims[0] // 2
+    half_crop_height = dims[1] // 2
 
-    if t_x + dims[0] // 2 > width:
-      off = t_x + 64 - width
-      t_x -= off
-    if t_y + dims[1] // 2 > height:
-      off = t_y + 64 - height
-      t_y -= off
-    if t_x - dims[0] // 2 < 0:
-      off = 64 - t_x
-      t_x += off
-    if t_y - dims[1] // 2 < 0:
-      off = 64 - t_y
-      t_y += off
+    t_x = tf.clip_by_value(t_x, half_crop_width, width - half_crop_width)
+    t_y = tf.clip_by_value(t_y, half_crop_height, height - half_crop_height)
 
-    return tf.image.crop_to_bounding_box(img, t_y - 64, t_x - 64, dims[0],
+    return tf.image.crop_to_bounding_box(img, t_y - half_crop_height,
+                                         t_x - half_crop_width, dims[0],
                                          dims[1])
 
 
-def draw_circle(radius, x, y, value):
+def _extract_array_from_string(s: str) -> np.ndarray:
+    """Ease of use function to extract an array from a csv string.
+
+    Args:
+        s: string to extract from.
+
+    Returns:
+        an np array.
+    """
+    arr = s.split(' ')
+    return np.array(arr, dtype=np.float32)
+
+
+def _bytes_feature(value: tf.Tensor) -> tf.train.Feature:
+    """Returns a bytes_list from a string / byte.
+
+    Args:
+        value: the value to converts.
+
+    Returns:
+        a tf.train.Feature from value.
+    """
+    if isinstance(value, type(tf.constant(0))):
+        value = value.numpy()
+    return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+
+
+def _int64_feature(value: tf.Tensor) -> tf.train.Feature:
+    """Returns an int64_list from a bool / enum / int / uint.
+
+    Args:
+        value: the value to converts.
+
+    Returns:
+        a tf.train.Feature from value
+    """
+    return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+
+
+def project_points_to_image_space(points: np.ndarray) -> np.ndarray:
+    """Projects the points from 3D camera frame to a 2D image frame.
+
+    Args:
+        points: the array of points to project.
+
+    Returns:
+        an np array of the projected points.
+    """
+    D = [0, 0, 0.0, 0.0, 0]
+    dist_coeffs = np.array(D).reshape(5, 1).astype(np.float32)
+    points = np.array(points)
+    points, _ = cv2.projectPoints(points, np.eye(3), np.zeros(3, ), cipm,
+                                  dist_coeffs)
+    return points.astype('int32')
+
+
+def draw_point(radius: int, x: int, y: int, value: int) -> np.ndarray:
+    """Draws a point of a certain radius on an image.
+
+    Args:
+        radius: the radius of the points drawn.
+        x: the x value to draw the point at.
+        y: the y value to draw the point at.
+        value: the value that is filled in the image.
+  
+    Returns:
+        an np array representing the image.
+    """
     img = np.zeros((512, 640, 1))
     for r in range(radius * 2 + 1):
         for c in range(radius * 2 + 1):
             t_y = y - radius + r
             t_x = x - radius + c
             if t_x < 640 and t_y < 512 and t_x >= 0 and t_y >= 0:
-                img[t_y][t_x] = value
+                img[t_y, t_x] = value
 
     return img
 
 
-def extract_array_from_string(s):
-    arr = s.split(' ')
-    return np.array(arr, dtype=np.float32)
+def draw_feature_img(points: np.ndarray, value: list) -> np.ndarray:
+    """Creates a feature image by drawing a point at point with a specific value.
 
+    Args:
+        points: an array of points.
+        value: an array with what value to draw at each point.
 
-def _bytes_feature(value):
-    """Returns a bytes_list from a string / byte."""
-    if isinstance(value, type(tf.constant(0))):
-        value = value.numpy()
-    return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
-
-
-def _int64_feature(value):
-    """Returns an int64_list from a bool / enum / int / uint."""
-    return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
-
-
-def project_points_to_image_space(points):
-    D = [0, 0, 0.0, 0.0, 0]
-    dist_coeffs = np.array(D).reshape(5, 1).astype(np.float32)
-    points = np.array(points)
-    points, _ = cv2.projectPoints(points, np.eye(3), np.zeros(3, ), cipm,
-                                  dist_coeffs)
-    points = points.astype('int32')
-
-    return points
-
-
-def draw_feature_img(points):
+    Returns:
+        an np array representing an image.
+    """
     img = []
-    for i in range(3):
-        img.append(draw_circle(6, points[i][0][0], points[i][0][1], 255))
+    for i, val in enumerate(value):
+        img.append(draw_point(6, points[i, 0, 0], points[i, 0, 1], val))
     return np.concatenate(img, axis=2)
 
 
-def crop_imgs(points, feature_rgb, feature_depth, rgbd):
-    center_x = points[0][0][0]
-    center_y = points[0][0][1]
-    feature_rgb = crop_to_target(center_x, center_y, feature_rgb, (128, 128))
-    feature_depth = crop_to_target(center_x, center_y, feature_depth,
-                                   (128, 128))
-    rgbd = crop_to_target(center_x, center_y, rgbd, (128, 128))
+def crop_imgs(
+        point: np.ndarray, target_point: np.ndarray, feature_rgb: np.ndarray,
+        feature_depth: np.ndarray, rgbd: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Crops the action images around point anf target point.
 
-    return feature_rgb, feature_depth, rgbd
+    Args:
+        point: the point to crop around.
+        feature_rgb: the feature rgb image.
+        feature_depthL the feature_depth image.
+        rgbd: the rgbd image.
+
+    Returns:
+        a tuple of cropped np array images.
+    """
+    target = crop_to_target(target_point, rgbd[:, :, :3], CROPPED_IMAGE_SIZE)
+    feature_rgb = crop_to_target(point, feature_rgb, CROPPED_IMAGE_SIZE)
+    feature_depth = crop_to_target(point, feature_depth, CROPPED_IMAGE_SIZE)
+    rgbd = crop_to_target(point, rgbd, CROPPED_IMAGE_SIZE)
+
+    return feature_rgb, feature_depth, rgbd, target
 
 
-def create_depth_img(rgbd):
-    depth = tf.expand_dims(rgbd[:, :, 3], axis=2)
-    depth = np.concatenate(
-        [depth, np.zeros(depth.shape),
-         np.zeros(depth.shape)], axis=2)
+def create_photometric_distortion_with_noise(rgb: np.ndarray) -> np.ndarray:
+    """Creates a new image based on rgbd with photomoetric distortion, 
+    including gaussian noise.
 
-    return depth
+    Args:
+        rgb: the image to transform.
 
-
-def create_photometric_distortion_with_noise(rgbd):
-    features = np.expand_dims(rgbd[:, :, :3], axis=0) / 256
-    features = image_transformations.ApplyPhotometricImageDistortions(
-        features,
+    Returns:
+        the transformed image.
+    """
+    image = np.expand_dims(rgb, axis=0) / 256
+    image = image_transformations.ApplyPhotometricImageDistortions(
+        image,
         random_brightness=True,
         random_saturation=True,
         random_hue=True,
         random_noise_level=0.05)
-    return features[0] * 256
+    return image[0] * 256
 
 
-def create_photometric_distortion_no_noise(rgbd):
-    features = np.expand_dims(rgbd[:, :, :3], axis=0) / 256
-    features = image_transformations.ApplyPhotometricImageDistortions(
-        features,
-        random_brightness=True,
-        random_saturation=True,
-        random_hue=True)
-    return features[0] * 256
+def create_photometric_distortion_no_noise(rgb: np.ndarray) -> np.ndarray:
+    """Creates a new image based on rgbd with photomoetric distortion, 
+    including gaussian noise.
 
-
-def create_dataset(cipm):
-    '''creates the data set
-
-    Parameters: 
-    data -- the existing data (Pandas Dataframe)
-    cipm -- the camera intrinsic projection matrix (np array)
+    Args:
+        rgb: the image to transform.
 
     Returns:
-    imgs -- An Nx5 array where N is the number of data points. Each element has the rgb, rgb action, depth, 
-    and depth action images
-    labels -- An Nx1 array that labels each grasp as a success or not
+        the transformed image.
+    """
+    image = np.expand_dims(rgb, axis=0) / 256
+    image = image_transformations.ApplyPhotometricImageDistortions(
+        image, random_brightness=True, random_saturation=True, random_hue=True)
+    return image[0] * 256
+
+
+def create_dataset(cipm: np.ndarray) -> Tuple[list, np.ndarray]:
+    '''transforms the data into action images, with rgb, depth, feature_rgb, 
+    feature_depth, and target images.
+
+    Args:
+        cipm: the camera intrinsic projection matrix.
+
+    Returns:
+        a Tuple[list, np.ndarray] with the action images and their labels.
     '''
     imgs = []
     labels = []
@@ -175,72 +214,94 @@ def create_dataset(cipm):
                 rgbd = np.load(f'data/{d}/{id}/rgbd.data')['arr_0']
             except:
                 continue
-            feature_left_finger = extract_array_from_string(
+            feature_left_finger = _extract_array_from_string(
                 data['left_fingertip_position'][i])
-            feature_right_finger = extract_array_from_string(
+            feature_right_finger = _extract_array_from_string(
                 data['right_fingertip_position'][i])
-            feature_wrist = extract_array_from_string(
+            feature_wrist = _extract_array_from_string(
                 data['base_gripper_position'][i])
-            target = extract_array_from_string(data['grasp_pose_position'][i])
+            target = _extract_array_from_string(data['grasp_pose_position'][i])
 
             # project points
-            points = project_points_to_image_space([feature_left_finger,
-                                                   feature_right_finger,
-                                                   feature_wrist])
-            target_points = project_points_to_image_space([target])
+            points = np.array(
+                [feature_left_finger, feature_right_finger, feature_wrist])
+            points = project_points_to_image_space(points)
+            target_points = project_points_to_image_space(np.array([target]))
 
             # draw action images
-            feature_rgb = draw_feature_img(points)
-            feature_depth = draw_feature_img(points)
+            feature_rgb = draw_feature_img(points, [255] * 3)
+            norms = [
+                np.linalg.norm(feature_left_finger),
+                np.linalg.norm(feature_right_finger),
+                np.linalg.norm(feature_wrist)
+            ]
+            feature_depth = draw_feature_img(points, norms)
 
             # crop images
-            target_img = crop_to_target(target_points[0][0][0], target_points[0][0][1], rgbd[:, :, :3], (128, 128))
-            feature_rgb, feature_depth, rgbd = crop_imgs(
-                points, feature_rgb, feature_depth, rgbd)
+            feature_rgb, feature_depth, rgbd, target_img = crop_imgs(
+                points[0, 0], target_points[0, 0], feature_rgb, feature_depth,
+                rgbd)
 
-            depth = create_depth_img(rgbd)
+            depth = tf.expand_dims(rgbd[:, :, 3], axis=2)
+            rgb = rgbd[:, :, :3]
 
             # determine success
             success = data['grasp_success'][
                 i] and not data['pieces_knocked_over'][i]
 
-            imgs.append([rgbd[:, :, :3], feature_rgb, depth, feature_depth, target_img])
+            imgs.append([rgb, feature_rgb, depth, feature_depth, target_img])
             labels.append(success)
 
             # create imgs with photometric distortion
             for _ in range(2):
-                features = create_photometric_distortion_with_noise(rgbd)
-                target_img = create_photometric_distortion_with_noise(target_img)
-                imgs.append([features, feature_rgb, depth, feature_depth, target_img])
+                transformed_image = create_photometric_distortion_with_noise(
+                    rgb)
+                target_img = create_photometric_distortion_with_noise(
+                    target_img)
+                imgs.append([
+                    transformed_image, feature_rgb, depth, feature_depth,
+                    target_img
+                ])
                 labels.append(success)
 
-            features = create_photometric_distortion_no_noise(rgbd)
+            transformed_image = create_photometric_distortion_no_noise(rgb)
             target_img = create_photometric_distortion_no_noise(target_img)
-            imgs.append([features, feature_rgb, depth, feature_depth, target_img])
+            imgs.append([
+                transformed_image, feature_rgb, depth, feature_depth,
+                target_img
+            ])
             labels.append(success)
 
     return imgs, np.array(labels)
 
 
-def serialize(img, lbl):
-    '''converts data to TFExamples'''
-    rgb, action_rgb, depth, action_depth, target = img
+def serialize(imgs: list, lbl: int) -> tf.train.Example:
+    '''converts data to TFExamples.
+
+    Args:
+        imgs: a list that contains the action images.
+        lbl: the label for the example.
+    
+    Returns:
+        the data moved into a tf example.
+    '''
+    rgb, feature_rgb, depth, feature_depth, target = imgs
     rgb = tf.cast(rgb, tf.uint8)
     encoded_rgb = tf.io.encode_jpeg(rgb)
     target = tf.cast(target, tf.uint8)
     encoded_target = tf.io.encode_jpeg(target)
-    action_rgb = tf.cast(action_rgb, tf.uint8)
-    encoded_action_rgb = tf.io.encode_jpeg(action_rgb)
+    feature_rgb = tf.cast(feature_rgb, tf.uint8)
+    encoded_feature_rgb = tf.io.encode_jpeg(feature_rgb)
     depth = tf.cast(depth, tf.float32)
     encoded_depth = tf.io.serialize_tensor(depth)
-    action_depth = tf.cast(action_depth, tf.float32)
-    encoded_action_depth = tf.io.serialize_tensor(action_depth)
+    feature_depth = tf.cast(feature_depth, tf.float32)
+    encoded_feature_depth = tf.io.serialize_tensor(feature_depth)
 
     feature = {
         'rgb': _bytes_feature(encoded_rgb),
-        'feature_rgb': _bytes_feature(encoded_action_rgb),
+        'feature_rgb': _bytes_feature(encoded_feature_rgb),
         'depth': _bytes_feature(encoded_depth),
-        'feature_depth': _bytes_feature(encoded_action_depth),
+        'feature_depth': _bytes_feature(encoded_feature_depth),
         'target': _bytes_feature(encoded_target),
         'grasp_success': _int64_feature(lbl)
     }
@@ -248,11 +309,16 @@ def serialize(img, lbl):
     return tf.train.Example(features=tf.train.Features(feature=feature))
 
 
-def write_imgs(X_train,
-               X_test,
-               y_train,
-               y_test,
-               record_file='images.tfrecords'):
+def write_imgs(X_train: np.ndarray, X_test: np.ndarray, y_train: np.ndarray,
+               y_test: np.ndarray):
+    """Writes the data as a tfrecord to a file.
+
+    Args:
+        X_train: an array with the training data
+        X_test: an array with the testing data
+        y_train: the training labels
+        y_test: the testing labels
+    """
     with tf.io.TFRecordWriter('train.tfrecord') as writer:
         for img, lbl in zip(X_train, y_train):
             tf_example = serialize(img, lbl)
@@ -272,7 +338,9 @@ if __name__ == '__main__':
                      [0, 0, 1]])
 
     imgs, labels = create_dataset(cipm)
+
     print(len(imgs))
+
     X_train, X_test, y_train, y_test = train_test_split(imgs,
                                                         labels,
                                                         test_size=0.2,
