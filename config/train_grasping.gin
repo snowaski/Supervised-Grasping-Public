@@ -22,13 +22,15 @@ eval_input_generator/DefaultRecordInputGenerator.batch_size = %EVAL_BATCH_SIZE
 
 train_eval_model.t2r_model = @GraspingModel()
 
-default_create_optimizer_fn.learning_rate = 0.0001
+# default_create_optimizer_fn.learning_rate = 0.0001
+create_adam_optimizer.learning_rate_fn = @cosine_decay_with_warmup
 
 #####################################
 # TRAINING
 ######################################
 
-train_eval_model.max_train_steps = 3000
+train_eval_model.max_train_steps = 50000
 train_eval_model.eval_steps = 200
 train_eval_model.input_generator_train = %TRAIN_INPUT_GENERATOR
 train_eval_model.input_generator_eval = %EVAL_INPUT_GENERATOR
+train_eval_model.create_exporters_fn = @create_default_exporters
