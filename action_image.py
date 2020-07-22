@@ -38,7 +38,7 @@ def crop_to_target(center: np.ndarray, img: np.ndarray,
 
 
 def _extract_array_from_string(s: str) -> np.ndarray:
-    """Ease of use function to extract an array from a csv string.
+    """Ease of use function to extract an array from a string.
 
     Args:
         s: string to extract from.
@@ -51,7 +51,7 @@ def _extract_array_from_string(s: str) -> np.ndarray:
 
 
 def _bytes_feature(value: tf.Tensor) -> tf.train.Feature:
-    """Returns a bytes_list from a string / byte.
+    """Converts a byte string to a tf.Feature to be used in a record.
 
     Args:
         value: the value to converts.
@@ -65,7 +65,7 @@ def _bytes_feature(value: tf.Tensor) -> tf.train.Feature:
 
 
 def _int64_feature(value: tf.Tensor) -> tf.train.Feature:
-    """Returns an int64_list from a bool / enum / int / uint.
+    """Converts an int_64 to a tf.Feature to be used in a record.
 
     Args:
         value: the value to converts.
@@ -110,7 +110,7 @@ def draw_point(radius: int, x: int, y: int, value: int) -> np.ndarray:
         for c in range(radius * 2 + 1):
             t_y = y - radius + r
             t_x = x - radius + c
-            if t_x < 640 and t_y < 512 and t_x >= 0 and t_y >= 0:
+            if 0 <= t_x < 640 and 0 <= t_y < 512:
                 img[t_y, t_x] = value
 
     return img
@@ -127,16 +127,18 @@ def draw_feature_img(points: np.ndarray, value: list) -> np.ndarray:
         an np array representing an image.
     """
     img = []
+    circle_radius = 6
     for i, val in enumerate(value):
-        img.append(draw_point(6, points[i, 0, 0], points[i, 0, 1], val))
+        img.append(
+            draw_point(circle_radius, points[i, 0, 0], points[i, 0, 1], val))
     return np.concatenate(img, axis=2)
 
 
 def crop_imgs(
-        point: np.ndarray, target_point: np.ndarray, feature_rgb: np.ndarray,
+        points: np.ndarray, target_point: np.ndarray, feature_rgb: np.ndarray,
         feature_depth: np.ndarray, rgbd: np.ndarray
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Crops the action images around point anf target point.
+    """Crops the action images around point and target point.
 
     Args:
         point: the point to crop around.
@@ -147,10 +149,14 @@ def crop_imgs(
     Returns:
         a tuple of cropped np array images.
     """
+    points = np.squeeze(points)
+    points = np.sum(points, axis=0) / 3
+    points = points.astype(np.int32)
+    
     target = crop_to_target(target_point, rgbd[:, :, :3], CROPPED_IMAGE_SIZE)
-    feature_rgb = crop_to_target(point, feature_rgb, CROPPED_IMAGE_SIZE)
-    feature_depth = crop_to_target(point, feature_depth, CROPPED_IMAGE_SIZE)
-    rgbd = crop_to_target(point, rgbd, CROPPED_IMAGE_SIZE)
+    feature_rgb = crop_to_target(points, feature_rgb, CROPPED_IMAGE_SIZE)
+    feature_depth = crop_to_target(points, feature_depth, CROPPED_IMAGE_SIZE)
+    rgbd = crop_to_target(points, rgbd, CROPPED_IMAGE_SIZE)
 
     return feature_rgb, feature_depth, rgbd, target
 
@@ -239,8 +245,7 @@ def create_dataset(cipm: np.ndarray) -> Tuple[list, np.ndarray]:
 
             # crop images
             feature_rgb, feature_depth, rgbd, target_img = crop_imgs(
-                points[0, 0], target_points[0, 0], feature_rgb, feature_depth,
-                rgbd)
+                points, target_points[0, 0], feature_rgb, feature_depth, rgbd)
 
             depth = tf.expand_dims(rgbd[:, :, 3], axis=2)
             rgb = rgbd[:, :, :3]
@@ -283,7 +288,7 @@ def serialize(imgs: list, lbl: int) -> tf.train.Example:
         lbl: the label for the example.
     
     Returns:
-        the data moved into a tf example.
+        TFExample containing the passed in data.
     '''
     rgb, feature_rgb, depth, feature_depth, target = imgs
     rgb = tf.cast(rgb, tf.uint8)

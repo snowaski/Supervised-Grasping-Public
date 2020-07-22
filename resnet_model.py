@@ -6,7 +6,7 @@ from tensor2robot.utils import tensorspec_utils as utils
 import film_resnet_model as resnet_lib
 from tensor2robot.layers import resnet
 from tensor2robot.preprocessors import image_transformations, abstract_preprocessor
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Union, Callable
 
 
 @gin.configurable
@@ -21,14 +21,14 @@ class GraspingPreprocessor(abstract_preprocessor.AbstractPreprocessor):
         Args:
         features: The input features extracted from a single example in our
             in_feature_specification format.
-        labels: (Optional None) The input labels extracted from a single example
+        labels: The input labels extracted from a single example
             in our in_label_specification format.
-        mode: (ModeKeys) Specifies if this is training, evaluation or prediction.
+        mode: Specifies if this is training, evaluation or prediction.
 
         Returns:
         features_preprocessed: The preprocessed features, potentially adding
             additional tensors derived from the input features.
-        labels_preprocessed: (Optional) The preprocessed labels, potentially
+        labels_preprocessed: The preprocessed labels, potentially
             adding additional tensors derived from the input features and labels.
         """
         features.imgs.RGB = tf.cast(features.imgs.RGB, tf.float32)
@@ -133,7 +133,8 @@ class GraspingPreprocessor(abstract_preprocessor.AbstractPreprocessor):
 
 @gin.configurable
 class GraspingModel(abstract_model.AbstractT2RModel):
-    def __init__(self, embedding_loss_fn=tf.compat.v1.losses.log_loss):
+    def __init__(self,
+                 embedding_loss_fn: Callable = tf.compat.v1.losses.log_loss):
         super(GraspingModel, self).__init__()
         self._embedding_loss_fn = embedding_loss_fn
 
@@ -184,8 +185,10 @@ class GraspingModel(abstract_model.AbstractT2RModel):
                              features: utils.TensorSpecStruct,
                              labels: utils.TensorSpecStruct,
                              mode: str,
-                             config=None,
-                             params=None) -> dict:
+                             config: Optional[
+                                 Union[tf.estimator.RunConfig,
+                                       tf.contrib.tpu.RunConfig]] = None,
+                             params: Optional[dict] = None) -> dict:
         """The inference network implementation.
         This creates the main network based on features.
 
@@ -196,7 +199,7 @@ class GraspingModel(abstract_model.AbstractT2RModel):
         labels: This is the second item returned from the input_fn and parsed by
             tensorspec_utils.validate_and_pack. A spec_structure which fulfills the
             requirements of the self.get_feature_specification.
-        mode: (ModeKeys) Specifies if this is training, evaluation or prediction.
+        mode: Specifies if this is training, evaluation or prediction.
         config: (Optional tf.estimator.RunConfig or contrib_tpu.RunConfig) Will
             receive what is passed to Estimator in config parameter, or the default
             config (tf.estimator.RunConfig). Allows updating things in your model_fn
@@ -234,13 +237,15 @@ class GraspingModel(abstract_model.AbstractT2RModel):
         """sets the default preprocessor for the model"""
         return GraspingPreprocessor
 
-    def model_train_fn(self,
-                       features: utils.TensorSpecStruct,
-                       labels: utils.TensorSpecStruct,
-                       inference_outputs: dict,
-                       mode: str,
-                       config=None,
-                       params=None) -> Tuple[tf.Tensor, dict]:
+    def model_train_fn(
+            self,
+            features: utils.TensorSpecStruct,
+            labels: utils.TensorSpecStruct,
+            inference_outputs: dict,
+            mode: str,
+            config: Optional[Union[tf.estimator.RunConfig,
+                                   tf.contrib.tpu.RunConfig]] = None,
+            params: Optional[dict] = None) -> Tuple[tf.Tensor, dict]:
         """The training model implementation.
 
         Args:
@@ -252,7 +257,7 @@ class GraspingModel(abstract_model.AbstractT2RModel):
             requirements of the self.get_feature_specification.
         inference_outputs: A dict containing the output tensors of
             model_inference_fn.
-        mode: (ModeKeys) Specifies if this is training, evaluation or prediction.
+        mode: Specifies if this is training, evaluation or prediction.
         config: (Optional tf.estimator.RunConfig or contrib_tpu.RunConfig) Will
             receive what is passed to Estimator in config parameter, or the default
             config (tf.estimator.RunConfig). Allows updating things in your model_fn
@@ -281,8 +286,9 @@ class GraspingModel(abstract_model.AbstractT2RModel):
                       train_loss: tf.Tensor,
                       train_outputs: dict,
                       mode: str,
-                      config=None,
-                      params=None):
+                      config: Optional[Union[tf.estimator.RunConfig,
+                                             tf.contrib.tpu.RunConfig]] = None,
+                      params: Optional[dict] = None):
         """Add summaries to the graph.
         Having a central place to add all summaries to the graph is helpful in order
         to compose models. For example, if an inference_network_fn is used within
@@ -300,7 +306,7 @@ class GraspingModel(abstract_model.AbstractT2RModel):
         train_loss: The final loss from model_train_fn.
         train_outputs: A dict containing the output tensors (dict) of
             model_train_fn.
-        mode: (ModeKeys) Specifies if this is training, evaluation or prediction.
+        mode: Specifies if this is training, evaluation or prediction.
         config: (Optional tf.estimator.RunConfig or contrib_tpu.RunConfig) Will
             receive what is passed to Estimator in config parameter, or the default
             config (tf.estimator.RunConfig). Allows updating things in your model_fn
@@ -335,8 +341,9 @@ class GraspingModel(abstract_model.AbstractT2RModel):
                       train_loss: tf.Tensor,
                       train_outputs: dict,
                       mode: str,
-                      config=None,
-                      params=None) -> dict:
+                      config: Optional[Union[tf.estimator.RunConfig,
+                                             tf.contrib.tpu.RunConfig]] = None,
+                      params: Optional[dict] = None) -> dict:
         """Sets the eval metrics displayed.
 
         Args:
@@ -351,7 +358,7 @@ class GraspingModel(abstract_model.AbstractT2RModel):
         train_loss: The final loss from model_train_fn.
         train_outputs: A dict containing the output tensors (dict) of
             model_train_fn.
-        mode: (ModeKeys) Specifies if this is training, evaluation or prediction.
+        mode: Specifies if this is training, evaluation or prediction.
         config: (Optional tf.estimator.RunConfig or contrib_tpu.RunConfig) Will
             receive what is passed to Estimator in config parameter, or the default
             config (tf.estimator.RunConfig). Allows updating things in your model_fn

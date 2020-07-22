@@ -3,7 +3,7 @@ import tensorflow.compat.v1 as tf
 from tensorflow.contrib import layers as contrib_layers
 from matplotlib import pyplot as plt
 from tensor2robot.utils import tensorspec_utils as utils
-from typing import Callable
+from typing import Callable, Optional
 
 _BATCH_NORM_DECAY = 0.997
 _BATCH_NORM_EPSILON = 1e-5
@@ -88,14 +88,15 @@ def _conv2d_fixed_padding(inputs: utils.TensorSpecStruct, filters: int,
 ################################################################################
 # ResNet block definitions.
 ################################################################################
-def _building_block_v1(inputs: utils.TensorSpecStruct,
-                       filters: int,
-                       training: bool,
-                       projection_shortcut: Callable,
-                       strides: int,
-                       data_format: str,
-                       weight_decay: float,
-                       film_gamma_beta=None) -> utils.TensorSpecStruct:
+def _building_block_v1(
+        inputs: utils.TensorSpecStruct,
+        filters: int,
+        training: bool,
+        projection_shortcut: Callable,
+        strides: int,
+        data_format: str,
+        weight_decay: float,
+        film_gamma_beta: Optional[tf.Tensor] = None) -> utils.TensorSpecStruct:
     """A single block for ResNet v1, without a bottleneck.
     Convolution then batch normalization then ReLU as described by:
       Deep Residual Learning for Image Recognition
@@ -148,14 +149,15 @@ def _building_block_v1(inputs: utils.TensorSpecStruct,
     return inputs
 
 
-def _building_block_v2(inputs: utils.TensorSpecStruct,
-                       filters: int,
-                       training: bool,
-                       projection_shortcut: Callable,
-                       strides: int,
-                       data_format: str,
-                       weight_decay: float,
-                       film_gamma_beta=None) -> utils.TensorSpecStruct:
+def _building_block_v2(
+        inputs: utils.TensorSpecStruct,
+        filters: int,
+        training: bool,
+        projection_shortcut: Callable,
+        strides: int,
+        data_format: str,
+        weight_decay: Optional[tf.Tensor] = None,
+        film_gamma_beta: Optional[tf.Tensor] = None) -> utils.TensorSpecStruct:
     """A single block for ResNet v2, without a bottleneck.
     Batch normalization then ReLu then convolution as described by:
       Identity Mappings in Deep Residual Networks
@@ -206,14 +208,15 @@ def _building_block_v2(inputs: utils.TensorSpecStruct,
     return inputs + shortcut
 
 
-def _bottleneck_block_v1(inputs: utils.TensorSpecStruct,
-                         filters: int,
-                         training: bool,
-                         projection_shortcut: Callable,
-                         strides: int,
-                         data_format: str,
-                         weight_decay: float,
-                         film_gamma_beta=None) -> utils.TensorSpecStruct:
+def _bottleneck_block_v1(
+        inputs: utils.TensorSpecStruct,
+        filters: int,
+        training: bool,
+        projection_shortcut: Callable,
+        strides: int,
+        data_format: str,
+        weight_decay: Optional[tf.Tensor] = None,
+        film_gamma_beta: Optional[tf.Tensor] = None) -> utils.TensorSpecStruct:
     """A single block for ResNet v1, with a bottleneck.
     Similar to _building_block_v1(), except using the "bottleneck" blocks
     described in:
@@ -277,14 +280,15 @@ def _bottleneck_block_v1(inputs: utils.TensorSpecStruct,
     return inputs
 
 
-def _bottleneck_block_v2(inputs: utils.TensorSpecStruct,
-                         filters: int,
-                         training: bool,
-                         projection_shortcut: Callable,
-                         strides: int,
-                         data_format: str,
-                         weight_decay: float,
-                         film_gamma_beta=None) -> utils.TensorSpecStruct:
+def _bottleneck_block_v2(
+        inputs: utils.TensorSpecStruct,
+        filters: int,
+        training: bool,
+        projection_shortcut: Callable,
+        strides: int,
+        data_format: str,
+        weight_decay: Optional[tf.Tensor] = None,
+        film_gamma_beta: Optional[tf.Tensor] = None) -> utils.TensorSpecStruct:
     """A single block for ResNet v2, with a bottleneck.
     Similar to _building_block_v2(), except using the "bottleneck" blocks
     described in:
@@ -354,7 +358,7 @@ def _bottleneck_block_v2(inputs: utils.TensorSpecStruct,
 def _block_layer(inputs: utils.TensorSpecStruct, filters: int,
                  bottleneck: bool, block_fn: Callable, blocks: int,
                  strides: int, training: bool, name: str, data_format: str,
-                 weight_decay: float,
+                 weight_decay: Optional[tf.Tensor],
                  film_gamma_betas: tf.Tensor) -> utils.TensorSpecStruct:
     """Creates one layer of blocks for the ResNet model.
     Args:
@@ -417,10 +421,10 @@ class Model(object):
                  first_pool_stride: int,
                  block_sizes: list,
                  block_strides: list,
-                 weight_decay: float,
-                 resnet_version=DEFAULT_VERSION,
+                 weight_decay: Optional[tf.Tensor],
+                 resnet_version: int = DEFAULT_VERSION,
                  data_format=None,
-                 dtype=DEFAULT_DTYPE):
+                 dtype: str = DEFAULT_DTYPE):
         """Creates a model for classifying an image.
         Args:
           resnet_size: A single integer for the size of the ResNet model.
@@ -548,8 +552,8 @@ class Model(object):
     def __call__(self,
                  inputs: utils.TensorSpecStruct,
                  training: bool,
-                 film_generator_fn=None,
-                 film_generator_input=None) -> tf.Tensor:
+                 film_generator_fn: Optional[Callable] = None,
+                 film_generator_input: Optional[Callable] = None) -> tf.Tensor:
         """Add operations to classify a batch of input images.
         Args:
           inputs: A Tensor representing a batch of input images.
