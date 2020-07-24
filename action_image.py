@@ -214,7 +214,11 @@ def create_dataset(cipm: np.ndarray) -> Tuple[list, np.ndarray]:
         if d == '.DS_Store':
             continue
         data = pd.read_csv(f'data/{d}/data.csv')
+        positive_examples = data['grasp_success'].value_counts()[True]
+        negative_examples = 0
         for i, id in enumerate(data['scenario_id']):
+            if negative_examples > positive_examples and not data['grasp_success'][i]:
+                continue
             # extract data
             try:
                 rgbd = np.load(f'data/{d}/{id}/rgbd.data')['arr_0']
@@ -253,6 +257,9 @@ def create_dataset(cipm: np.ndarray) -> Tuple[list, np.ndarray]:
             # determine success
             success = data['grasp_success'][
                 i] and not data['pieces_knocked_over'][i]
+
+            if not success:
+                negative_examples += 1
 
             imgs.append([rgb, feature_rgb, depth, feature_depth, target_img])
             labels.append(success)
