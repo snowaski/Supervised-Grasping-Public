@@ -22,8 +22,8 @@ eval_input_generator/DefaultRecordInputGenerator.batch_size = %EVAL_BATCH_SIZE
 
 train_eval_model.t2r_model = @GraspingModel()
 
-# default_create_optimizer_fn.learning_rate = 0.0001
 create_adam_optimizer.learning_rate_fn = @cosine_decay_with_warmup
+GraspingModel.include_target_img = False
 
 #####################################
 # TRAINING
