@@ -3,11 +3,10 @@ import tensorflow as tf
 import pandas as pd
 import cv2
 import os
+import argparse
 from sklearn.model_selection import train_test_split
 from tensor2robot.preprocessors import image_transformations
 from typing import List, Tuple
-
-from matplotlib import pyplot as plt
 
 CROPPED_IMAGE_SIZE = (128, 128)
 
@@ -134,16 +133,15 @@ def draw_feature_img(points: np.ndarray, value: list) -> np.ndarray:
     return np.concatenate(img, axis=2)
 
 
-def crop_imgs(
-        points: np.ndarray, target_point: np.ndarray, feature_rgb: np.ndarray,
-        feature_depth: np.ndarray, rgbd: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def crop_imgs(points: np.ndarray, feature_rgb: np.ndarray,
+              feature_depth: np.ndarray,
+              rgbd: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Crops the action images around point and target point.
 
     Args:
-        point: the point to crop around.
+        points: the point to crop around.
         feature_rgb: the feature rgb image.
-        feature_depthL the feature_depth image.
+        feature_depth: the feature_depth image.
         rgbd: the rgbd image.
 
     Returns:
@@ -152,13 +150,12 @@ def crop_imgs(
     points = np.squeeze(points)
     points = np.sum(points, axis=0) / 3
     points = points.astype(np.int32)
-    
-    target = crop_to_target(target_point, rgbd[:, :, :3], CROPPED_IMAGE_SIZE)
+
     feature_rgb = crop_to_target(points, feature_rgb, CROPPED_IMAGE_SIZE)
     feature_depth = crop_to_target(points, feature_depth, CROPPED_IMAGE_SIZE)
     rgbd = crop_to_target(points, rgbd, CROPPED_IMAGE_SIZE)
 
-    return feature_rgb, feature_depth, rgbd, target
+    return feature_rgb, feature_depth, rgbd
 
 
 def create_photometric_distortion_with_noise(rgb: np.ndarray) -> np.ndarray:
@@ -197,12 +194,15 @@ def create_photometric_distortion_no_noise(rgb: np.ndarray) -> np.ndarray:
     return image[0] * 256
 
 
-def create_dataset(cipm: np.ndarray) -> Tuple[list, np.ndarray]:
+def create_dataset(cipm: np.ndarray, mode: str,
+                   balance: bool) -> Tuple[list, np.ndarray]:
     '''transforms the data into action images, with rgb, depth, feature_rgb, 
     feature_depth, and target images.
 
     Args:
         cipm: the camera intrinsic projection matrix.
+        mode: determines which images are created. Either "target" or "no-target".
+        balance: determines whether or not to balance the negative and positive examples.
 
     Returns:
         a Tuple[list, np.ndarray] with the action images and their labels.
@@ -217,7 +217,8 @@ def create_dataset(cipm: np.ndarray) -> Tuple[list, np.ndarray]:
         positive_examples = data['grasp_success'].value_counts()[True]
         negative_examples = 0
         for i, id in enumerate(data['scenario_id']):
-            if negative_examples > positive_examples and not data['grasp_success'][i]:
+            if balance and negative_examples > positive_examples and not data[
+                    'grasp_success'][i]:
                 continue
             # extract data
             try:
@@ -230,13 +231,11 @@ def create_dataset(cipm: np.ndarray) -> Tuple[list, np.ndarray]:
                 data['right_fingertip_position'][i])
             feature_wrist = _extract_array_from_string(
                 data['base_gripper_position'][i])
-            target = _extract_array_from_string(data['grasp_pose_position'][i])
 
             # project points
             points = np.array(
                 [feature_left_finger, feature_right_finger, feature_wrist])
             points = project_points_to_image_space(points)
-            target_points = project_points_to_image_space(np.array([target]))
 
             # draw action images
             feature_rgb = draw_feature_img(points, [255] * 3)
@@ -247,9 +246,20 @@ def create_dataset(cipm: np.ndarray) -> Tuple[list, np.ndarray]:
             ]
             feature_depth = draw_feature_img(points, norms)
 
+            # create target image
+            if mode == 'target':
+                target = _extract_array_from_string(
+                    data['grasp_pose_position'][i])
+                target_points = project_points_to_image_space(
+                    np.array([target]))
+                target_img = crop_to_target(target_points[0, 0],
+                                            rgbd[:, :, :3], CROPPED_IMAGE_SIZE)
+            else:
+                target_img = None
+
             # crop images
-            feature_rgb, feature_depth, rgbd, target_img = crop_imgs(
-                points, target_points[0, 0], feature_rgb, feature_depth, rgbd)
+            feature_rgb, feature_depth, rgbd = crop_imgs(
+                points, feature_rgb, feature_depth, rgbd)
 
             depth = tf.expand_dims(rgbd[:, :, 3], axis=2)
             rgb = rgbd[:, :, :3]
@@ -268,8 +278,9 @@ def create_dataset(cipm: np.ndarray) -> Tuple[list, np.ndarray]:
             for _ in range(2):
                 transformed_image = create_photometric_distortion_with_noise(
                     rgb)
-                target_img = create_photometric_distortion_with_noise(
-                    target_img)
+                if mode == 'target':
+                    target_img = create_photometric_distortion_with_noise(
+                        target_img)
                 imgs.append([
                     transformed_image, feature_rgb, depth, feature_depth,
                     target_img
@@ -277,7 +288,8 @@ def create_dataset(cipm: np.ndarray) -> Tuple[list, np.ndarray]:
                 labels.append(success)
 
             transformed_image = create_photometric_distortion_no_noise(rgb)
-            target_img = create_photometric_distortion_no_noise(target_img)
+            if mode == 'target':
+                target_img = create_photometric_distortion_no_noise(target_img)
             imgs.append([
                 transformed_image, feature_rgb, depth, feature_depth,
                 target_img
@@ -300,8 +312,9 @@ def serialize(imgs: list, lbl: int) -> tf.train.Example:
     rgb, feature_rgb, depth, feature_depth, target = imgs
     rgb = tf.cast(rgb, tf.uint8)
     encoded_rgb = tf.io.encode_jpeg(rgb)
-    target = tf.cast(target, tf.uint8)
-    encoded_target = tf.io.encode_jpeg(target)
+    if target is not None:
+        target = tf.cast(target, tf.uint8)
+        encoded_target = tf.io.encode_jpeg(target)
     feature_rgb = tf.cast(feature_rgb, tf.uint8)
     encoded_feature_rgb = tf.io.encode_jpeg(feature_rgb)
     depth = tf.cast(depth, tf.float32)
@@ -314,9 +327,11 @@ def serialize(imgs: list, lbl: int) -> tf.train.Example:
         'feature_rgb': _bytes_feature(encoded_feature_rgb),
         'depth': _bytes_feature(encoded_depth),
         'feature_depth': _bytes_feature(encoded_feature_depth),
-        'target': _bytes_feature(encoded_target),
         'grasp_success': _int64_feature(lbl)
     }
+
+    if target is not None:
+        feature['target'] = _bytes_feature(encoded_target),
 
     return tf.train.Example(features=tf.train.Features(feature=feature))
 
@@ -343,13 +358,20 @@ def write_imgs(X_train: np.ndarray, X_test: np.ndarray, y_train: np.ndarray,
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode",
+                        choices=["target", "no-target"],
+                        default="target")
+    parser.add_argument("--balance", action='store_true')
+    args = parser.parse_args()
+
     tf.enable_eager_execution()
 
     cipm = np.array([[739.22373806060455 / 2, 0, 640.56587982177734 / 2],
                      [0, 739.22373806060455 / 2, 512.44139003753662 / 2],
                      [0, 0, 1]])
 
-    imgs, labels = create_dataset(cipm)
+    imgs, labels = create_dataset(cipm, args.mode, args.balance)
 
     print(len(imgs))
 
