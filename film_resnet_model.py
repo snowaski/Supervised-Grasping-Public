@@ -663,7 +663,6 @@ class Model(object):
                                                weight_decay=self.weight_decay)
 
             inputs = tf.squeeze(inputs)
-            # inputs = tf.expand_dims(inputs, axis=1)
             inputs = tf.nn.sigmoid(inputs)
             inputs = tf.identity(inputs, 'predictions')
             return inputs

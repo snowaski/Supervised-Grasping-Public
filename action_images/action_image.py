@@ -214,10 +214,10 @@ def get_data(mode: str, data_dir: str = 'data/') -> Tuple[list, int]:
 
     data = []
     print(os.listdir(data_dir))
-    for d in os.listdir('data/'):
+    for d in os.listdir(data_dir):
         if d == '.DS_Store':
             continue
-        csv = pd.read_csv(f'data/{d}/data.csv')
+        csv = pd.read_csv(f'{data_dir}/{d}/data.csv')
 
         for i, id in enumerate(csv['scenario_id']):
             entry = []
@@ -394,6 +394,7 @@ if __name__ == '__main__':
                         choices=["target", "no-target"],
                         default="target")
     parser.add_argument("--balance", action='store_true')
+    parser.add_argument("--data-dir", default="data/")
     args = parser.parse_args()
 
     tf.enable_eager_execution()
@@ -402,7 +403,7 @@ if __name__ == '__main__':
                      [0, 739.22373806060455 / 2, 512.44139003753662 / 2],
                      [0, 0, 1]])
 
-    data, balance_examples = get_data(args.mode)
+    data, balance_examples = get_data(args.mode, args.data_dir)
     imgs, labels = create_dataset(cipm, data, args.balance, balance_examples)
 
     print(len(imgs))

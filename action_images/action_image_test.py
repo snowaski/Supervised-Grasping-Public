@@ -78,8 +78,8 @@ class ActionImageTest(tf.test.TestCase):
                                                             random_state=890,
                                                             shuffle=True)
 
-        train_file_path = 'test_train.tfrecord'
-        test_file_path = 'test_train.tfrecord'
+        train_file_path = 'action_images/test_train.tfrecord'
+        test_file_path = 'action_images/test_train.tfrecord'
         action.write_imgs(X_train, X_test, y_train, y_test, train_file_path,
                           test_file_path)
 
