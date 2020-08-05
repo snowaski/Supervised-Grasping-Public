@@ -77,7 +77,8 @@ def _int64_feature(value: tf.Tensor) -> tf.train.Feature:
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
 
-def project_points_to_image_space(points: np.ndarray, cipm: np.ndarray) -> np.ndarray:
+def project_points_to_image_space(points: np.ndarray,
+                                  cipm: np.ndarray) -> np.ndarray:
     """Projects the points from 3D camera frame to a 2D image frame.
 
     Args:
@@ -198,11 +199,12 @@ def create_photometric_distortion_no_noise(rgb: np.ndarray) -> np.ndarray:
     return image[0] * 256
 
 
-def get_data(mode: str, data_dir: str = 'data/') -> Tuple[list, int]:
+def get_data(mode: str, balance: bool, data_dir: str = 'data/') -> list:
     """Extracts the data from data_dir using data.csv.
 
     Args:
         mode: determines which images are created. Either "target" or "no-target".
+        balance: determines whether or not to balance the negative and positive examples.
         data_dir: the directory path where the data is.
 
     Returns:
@@ -211,52 +213,60 @@ def get_data(mode: str, data_dir: str = 'data/') -> Tuple[list, int]:
         grasp is a success.
         the number of successful grasps.
     """
-
     data = []
     print(os.listdir(data_dir))
     for d in os.listdir(data_dir):
         if d == '.DS_Store':
             continue
         csv = pd.read_csv(f'{data_dir}/{d}/data.csv')
+        bal = not (csv['grasp_success'].value_counts()[True] > csv['grasp_success'].value_counts()[False])
+        example_limit = csv['grasp_success'].value_counts()[bal]
+        print(example_limit)
+        balance_examples = 0
 
         for i, id in enumerate(csv['scenario_id']):
+            if balance and balance_examples > example_limit:
+                continue
             entry = []
             try:
-                entry.append(np.load(f'{data_dir}/{d}/{id}/rgbd.data')['arr_0'])
+                entry.append(
+                    np.load(f'{data_dir}/{d}/{id}/rgbd.data')['arr_0'])
             except KeyError:
                 continue
 
-            entry.append(_extract_array_from_string(
-                    csv['left_fingertip_position'][i]))
-            entry.append(_extract_array_from_string(
-                    csv['right_fingertip_position'][i]))
-            entry.append(_extract_array_from_string(
-                    csv['base_gripper_position'][i]))
+            entry.append(
+                _extract_array_from_string(csv['left_fingertip_position'][i]))
+            entry.append(
+                _extract_array_from_string(csv['right_fingertip_position'][i]))
+            entry.append(
+                _extract_array_from_string(csv['base_gripper_position'][i]))
 
             if mode == 'target':
-                entry.append(_extract_array_from_string(
-                    csv['grasp_pose_position'][i]))
+                entry.append(
+                    _extract_array_from_string(csv['grasp_pose_position'][i]))
             else:
                 entry.append(None)
 
             # determine success
-            entry.append(csv['grasp_success'][
-                i] and not csv['pieces_knocked_over'][i])
+            entry.append(csv['grasp_success'][i]
+                         and not csv['pieces_knocked_over'][i])
+            
+            if entry[-1] != bal:
+                balance_examples += 1
 
             data.append(entry)
+        print(balance_examples)
 
-    return data, csv['grasp_success'].value_counts()[True]
-            
+    return data
 
 
-def create_dataset(cipm: np.ndarray, data: list,
-                   balance: bool, positive_examples: int) -> Tuple[list, np.ndarray]:
+def create_dataset(cipm: np.ndarray, data: list) -> Tuple[list, np.ndarray]:
     '''transforms the data into action images, with rgb, depth, feature_rgb,
     feature_depth, and target images.
 
     Args:
         cipm: the camera intrinsic projection matrix.
-        balance: determines whether or not to balance the negative and positive examples.
+        data: a list containg list with rgbd data, 3D points, and the success of the entry.
 
     Returns:
         a Tuple[list, np.ndarray] with the action images and their labels.
@@ -265,10 +275,6 @@ def create_dataset(cipm: np.ndarray, data: list,
     labels = []
 
     for rgbd, feature_left_finger, feature_right_finger, feature_wrist, target, success in data:
-        negative_examples = 0
-        if balance and negative_examples > positive_examples and not success:
-            continue
-
         # project points
         points = np.array(
             [feature_left_finger, feature_right_finger, feature_wrist])
@@ -287,28 +293,24 @@ def create_dataset(cipm: np.ndarray, data: list,
         if target is not None:
             target_points = project_points_to_image_space(
                 np.array([target]), cipm)
-            target_img = crop_to_target(target_points[0, 0],
-                                        rgbd[:, :, :3], CROPPED_IMAGE_SIZE)
+            target_img = crop_to_target(target_points[0, 0], rgbd[:, :, :3],
+                                        CROPPED_IMAGE_SIZE)
         else:
             target_img = None
 
         # crop images
-        feature_rgb, feature_depth, rgbd = crop_imgs(
-            points, feature_rgb, feature_depth, rgbd)
+        feature_rgb, feature_depth, rgbd = crop_imgs(points, feature_rgb,
+                                                     feature_depth, rgbd)
 
         depth = tf.expand_dims(rgbd[:, :, 3], axis=2)
         rgb = rgbd[:, :, :3]
-
-        if not success:
-            negative_examples += 1
 
         imgs.append([rgb, feature_rgb, depth, feature_depth, target_img])
         labels.append(success)
 
         # create imgs with photometric distortion
         for _ in range(2):
-            transformed_image = create_photometric_distortion_with_noise(
-                rgb)
+            transformed_image = create_photometric_distortion_with_noise(rgb)
             if target is not None:
                 target_img = create_photometric_distortion_with_noise(
                     target_img)
@@ -321,10 +323,8 @@ def create_dataset(cipm: np.ndarray, data: list,
         transformed_image = create_photometric_distortion_no_noise(rgb)
         if target is not None:
             target_img = create_photometric_distortion_no_noise(target_img)
-        imgs.append([
-            transformed_image, feature_rgb, depth, feature_depth,
-            target_img
-        ])
+        imgs.append(
+            [transformed_image, feature_rgb, depth, feature_depth, target_img])
         labels.append(success)
 
     return imgs, np.array(labels)
@@ -392,9 +392,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode",
                         choices=["target", "no-target"],
-                        default="target")
-    parser.add_argument("--balance", action='store_true')
-    parser.add_argument("--data-dir", default="data/")
+                        default="target",
+                        help='determines whether to create target images')
+    parser.add_argument(
+        "--balance",
+        action='store_true',
+        help='determines whether to balance positive and negative examples')
+    parser.add_argument("--data-dir",
+                        default="data/",
+                        help='the directory to find data')
     args = parser.parse_args()
 
     tf.enable_eager_execution()
@@ -403,8 +409,9 @@ if __name__ == '__main__':
                      [0, 739.22373806060455 / 2, 512.44139003753662 / 2],
                      [0, 0, 1]])
 
-    data, balance_examples = get_data(args.mode, args.data_dir)
-    imgs, labels = create_dataset(cipm, data, args.balance, balance_examples)
+    data = get_data(args.mode, args.balance, args.data_dir)
+    print(len(data))
+    imgs, labels = create_dataset(cipm, data)
 
     print(len(imgs))
 
@@ -414,4 +421,5 @@ if __name__ == '__main__':
                                                         random_state=890,
                                                         shuffle=True)
 
-    write_imgs(X_train, X_test, y_train, y_test, 'train.tfrecord', 'test.tfrecord')
+    write_imgs(X_train, X_test, y_train, y_test, 'train.tfrecord',
+               'test.tfrecord')

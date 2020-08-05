@@ -97,7 +97,7 @@ class ActionImageTest(tf.test.TestCase):
 
         data = [[rgbd, points[0], points[1], points[2], points[3], success]]
 
-        imgs, lbls = action.create_dataset(cipm, data, False, 0)
+        imgs, lbls = action.create_dataset(cipm, data)
 
         imgs = imgs[0]
 
