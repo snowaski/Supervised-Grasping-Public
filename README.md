@@ -17,7 +17,7 @@ optional arguments:
   --balance                          balances positive and negative examples
   --data-dir DATA_DIR                the directory to find data
   ```
-The expected format for data in this repository is a directory with sub directories that contain the actual data. Each sub directory has a csv within called 'data.csv' to navigate the data. Example data can be found here:
+The expected format for data in this repository is a directory with sub directories that contain the actual data. Each sub directory has a csv within called 'data.csv' to navigate the data. Example data can be found [here](https://drive.google.com/drive/folders/1zBJdu87r0Avqv1P0hISI9w004spJdMN1?usp=sharing).
 
 ## Training the Model
 ```
