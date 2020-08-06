@@ -4,7 +4,10 @@ This strategy uses action images and a Resnet model to optimize grasping chess p
 
 ## Requirements
 
-[Tensor2Robot](https://github.com/google-research/tensor2robot) must be cloned and placed into this directory.
+[Tensor2Robot](https://github.com/google-research/tensor2robot) must be cloned and placed into this directory, along with the python modules in requirements.txt. They can be installed with:
+```
+pip install -r tensor2robot/requirements.txt
+```
 
 ## Action Image Usage
 ```
