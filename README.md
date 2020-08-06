@@ -23,3 +23,4 @@ The expected format for data in this repository is a directory with sub director
 ```
 python run_t2r_trainer.py --logtostderr --gin_configs="config/train_grasping.gin"
 ```
+The path to your data should be specified in config/train_grasping.gin.
