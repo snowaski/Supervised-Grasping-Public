@@ -1,7 +1,6 @@
 from six.moves import range
 import tensorflow.compat.v1 as tf
 from tensorflow.contrib import layers as contrib_layers
-from matplotlib import pyplot as plt
 from tensor2robot.utils import tensorspec_utils as utils
 from typing import Callable, Optional
 
@@ -552,6 +551,7 @@ class Model(object):
     def __call__(self,
                  inputs: utils.TensorSpecStruct,
                  training: bool,
+                 include_target_img: bool,
                  film_generator_fn: Optional[Callable] = None,
                  film_generator_input: Optional[Callable] = None) -> tf.Tensor:
         """Add operations to classify a batch of input images.
@@ -559,17 +559,22 @@ class Model(object):
           inputs: A Tensor representing a batch of input images.
           training: A boolean. Set to True to add operations required only when
             training the classifier.
+          include_target_img: Whether or not the model has a target image tower.
           film_generator_fn: Callable that takes in a list of lists.
           film_generator_input: Tensor to be passed into film_generator_fn.
 
         Returns:
           A logits Tensor with shape [<batch_size>, self.num_classes].
         """
-        filters = [4, 8, [256, 32, 32], 8, 4]
+        filters = [4, 8, [256, 32, 32], 8]
+        if include_target_img:
+            filters.append(4)
+        imgs = inputs
         inputs = [
-            inputs.RGB, inputs.Feature_RGB, inputs.Depth, inputs.Feature_Depth,
-            inputs.Target
+            inputs.RGB, inputs.Feature_RGB, inputs.Depth, inputs.Feature_Depth
         ]
+        if include_target_img:
+            inputs.append(imgs.Target)
         with self._model_variable_scope():
             if self.data_format == 'channels_first':
                 # Convert the inputs from channels_last (NHWC) to channels_first (NCHW).
@@ -657,7 +662,6 @@ class Model(object):
                                                weight_decay=self.weight_decay)
 
             inputs = tf.squeeze(inputs)
-            inputs = tf.expand_dims(inputs, axis=1)
             inputs = tf.nn.sigmoid(inputs)
             inputs = tf.identity(inputs, 'predictions')
             return inputs
