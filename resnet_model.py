@@ -204,7 +204,7 @@ class GraspingPreprocessorWithoutTarget(
         """
         spec = utils.TensorSpecStruct()
         spec['grasp_success_spec'] = utils.ExtendedTensorSpec(
-            shape=(1), dtype=tf.int64, name='grasp_success')
+            shape=(), dtype=tf.int64, name='grasp_success')
         return spec
 
     def get_out_feature_specification(self,
@@ -242,7 +242,7 @@ class GraspingPreprocessorWithoutTarget(
         """
         spec = utils.TensorSpecStruct()
         spec['grasp_success_spec'] = utils.ExtendedTensorSpec(
-            shape=(1), dtype=tf.int64, name='grasp_success')
+            shape=(), dtype=tf.int64, name='grasp_success')
         return spec
 
 

@@ -9,6 +9,6 @@ gym==0.10.9
 tensorflow-probability==0.7.0
 tf-slim==1.0
 pandas==1.0.5
-opencv-python==4.3.0
+opencv-python==4.3.0.36
 argparse==1.1
 scikit-learn==0.23.1

@@ -1,7 +1,6 @@
 from six.moves import range
 import tensorflow.compat.v1 as tf
 from tensorflow.contrib import layers as contrib_layers
-from matplotlib import pyplot as plt
 from tensor2robot.utils import tensorspec_utils as utils
 from typing import Callable, Optional
 

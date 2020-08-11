@@ -78,8 +78,8 @@ class ActionImageTest(tf.test.TestCase):
                                                             random_state=890,
                                                             shuffle=True)
 
-        train_file_path = 'action_images/test_train.tfrecord'
-        test_file_path = 'action_images/test_train.tfrecord'
+        train_file_path = 'test_files/test_train.tfrecord'
+        test_file_path = 'test_files/test_train.tfrecord'
         action.write_imgs(X_train, X_test, y_train, y_test, train_file_path,
                           test_file_path)
 
@@ -101,11 +101,11 @@ class ActionImageTest(tf.test.TestCase):
 
         imgs = imgs[0]
 
-        self.assertAllEqual(imgs[0], np.load('test_files/rgb.npy'))
-        self.assertAllEqual(imgs[1], np.load('test_files/feature_rgb.npy'))
-        self.assertAllEqual(imgs[2], np.load('test_files/depth.npy'))
-        self.assertAllEqual(imgs[3], np.load('test_files/feature_depth.npy'))
-        self.assertAllEqual(imgs[4], np.load('test_files/target.npy'))
+        self.assertAllEqual(imgs[0], np.load('test_files/generic_example/rgb.npy'))
+        self.assertAllEqual(imgs[1], np.load('test_files/generic_example/feature_rgb.npy'))
+        self.assertAllEqual(imgs[2], np.load('test_files/generic_example/depth.npy'))
+        self.assertAllEqual(imgs[3], np.load('test_files/generic_example/feature_depth.npy'))
+        self.assertAllEqual(imgs[4], np.load('test_files/generic_example/target.npy'))
 
 
 if __name__ == '__main__':

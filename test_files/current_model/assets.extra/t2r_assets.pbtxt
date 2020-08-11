@@ -1,0 +1,71 @@
+feature_spec {
+  key_value {
+    key: "imgs/Depth"
+    value {
+      dtype: 7
+      name: "depth"
+      is_optional: false
+      is_extracted: false
+    }
+  }
+  key_value {
+    key: "imgs/Feature_Depth"
+    value {
+      dtype: 7
+      name: "feature_depth"
+      is_optional: false
+      is_extracted: false
+    }
+  }
+  key_value {
+    key: "imgs/Feature_RGB"
+    value {
+      shape: 128
+      shape: 128
+      shape: 3
+      dtype: 4
+      name: "feature_rgb"
+      is_optional: false
+      is_extracted: false
+      data_format: "jpeg"
+    }
+  }
+  key_value {
+    key: "imgs/RGB"
+    value {
+      shape: 128
+      shape: 128
+      shape: 3
+      dtype: 4
+      name: "rgb"
+      is_optional: false
+      is_extracted: false
+      data_format: "jpeg"
+    }
+  }
+  key_value {
+    key: "imgs/Target"
+    value {
+      shape: 128
+      shape: 128
+      shape: 3
+      dtype: 4
+      name: "target"
+      is_optional: false
+      is_extracted: false
+      data_format: "jpeg"
+    }
+  }
+}
+label_spec {
+  key_value {
+    key: "grasp_success_spec"
+    value {
+      shape: 1
+      dtype: 9
+      name: "grasp_success"
+      is_optional: false
+      is_extracted: false
+    }
+  }
+}

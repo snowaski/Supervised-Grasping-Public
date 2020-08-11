@@ -115,7 +115,6 @@ class TrainEvalTest(tf.test.TestCase):
             predicted = numpy_predictor_fn(feature)['grasp_success'].flatten()
             numpy_predictions.append(predicted)
 
-
 if __name__ == '__main__':
     tf.enable_eager_execution()
     tf.test.main()
