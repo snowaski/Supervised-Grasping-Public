@@ -219,7 +219,8 @@ def get_data(mode: str, balance: bool, data_dir: str = 'data/') -> list:
         if d == '.DS_Store':
             continue
         csv = pd.read_csv(f'{data_dir}/{d}/data.csv')
-        bal = not (csv['grasp_success'].value_counts()[True] > csv['grasp_success'].value_counts()[False])
+        bal = not (csv['grasp_success'].value_counts()[True] >
+                   csv['grasp_success'].value_counts()[False])
         example_limit = csv['grasp_success'].value_counts()[bal]
 
         balance_examples = 0
@@ -250,7 +251,7 @@ def get_data(mode: str, balance: bool, data_dir: str = 'data/') -> list:
             # determine success
             entry.append(csv['grasp_success'][i]
                          and not csv['pieces_knocked_over'][i])
-            
+
             if entry[-1] != bal:
                 balance_examples += 1
 
@@ -304,8 +305,6 @@ def create_dataset(cipm: np.ndarray, data: list) -> Tuple[list, np.ndarray]:
         depth = tf.expand_dims(rgbd[:, :, 3], axis=2)
         rgb = rgbd[:, :, :3]
 
-        plt.imshow(feature_rgb)
-        plt.show()
         imgs.append([rgb, feature_rgb, depth, feature_depth, target_img])
         labels.append(success)
 
