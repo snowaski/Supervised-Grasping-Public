@@ -199,11 +199,11 @@ def create_photometric_distortion_no_noise(rgb: np.ndarray) -> np.ndarray:
     return image[0] * 256
 
 
-def get_data(mode: str, balance: bool, data_dir: str = 'data/') -> list:
+def get_data(target: bool, balance: bool, data_dir: str = 'data/') -> list:
     """Extracts the data from data_dir using data.csv.
 
     Args:
-        mode: determines which images are created. Either "target" or "no-target".
+        target: determines whether to include a target image or not.
         balance: determines whether or not to balance the negative and positive examples.
         data_dir: the directory path where the data is.
 
@@ -242,7 +242,7 @@ def get_data(mode: str, balance: bool, data_dir: str = 'data/') -> list:
             entry.append(
                 _extract_array_from_string(csv['base_gripper_position'][i]))
 
-            if mode == 'target':
+            if target:
                 entry.append(
                     _extract_array_from_string(csv['grasp_pose_position'][i]))
             else:
@@ -388,10 +388,10 @@ def write_imgs(X_train: np.ndarray, X_test: np.ndarray, y_train: np.ndarray,
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode",
-                        choices=["target", "no-target"],
-                        default="target",
-                        help='balances positive and negative examples')
+    parser.add_argument(
+        "--target",
+        action='store_true',
+        help='determines whether to include a target action image')
     parser.add_argument(
         "--balance",
         action='store_true',
@@ -407,7 +407,7 @@ if __name__ == '__main__':
                      [0, 739.22373806060455 / 2, 512.44139003753662 / 2],
                      [0, 0, 1]])
 
-    data = get_data(args.mode, args.balance, args.data_dir)
+    data = get_data(args.targetd, args.balance, args.data_dir)
     print(len(data))
     imgs, labels = create_dataset(cipm, data)
 
