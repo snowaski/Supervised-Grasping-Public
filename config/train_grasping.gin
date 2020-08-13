@@ -24,7 +24,7 @@ train_eval_model.t2r_model = @GraspingModel()
 train_eval_model.model_dir="./latest_model"
 
 create_adam_optimizer.learning_rate_fn = @cosine_decay_with_warmup
-GraspingModel.include_target_img = False
+GraspingModel.include_target_img = True
 
 #####################################
 # TRAINING

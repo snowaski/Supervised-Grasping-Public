@@ -1,3 +1,6 @@
+import sys, os
+sys.path.append(os.path.abspath('.'))
+
 import tensorflow.compat.v1 as tf
 import numpy as np
 import action_image as action
@@ -78,8 +81,8 @@ class ActionImageTest(tf.test.TestCase):
                                                             random_state=890,
                                                             shuffle=True)
 
-        train_file_path = 'test_files/test_train.tfrecord'
-        test_file_path = 'test_files/test_train.tfrecord'
+        train_file_path = 'action_images/test_files/test_train.tfrecord'
+        test_file_path = 'action_images/test_files/test_train.tfrecord'
         action.write_imgs(X_train, X_test, y_train, y_test, train_file_path,
                           test_file_path)
 
@@ -91,9 +94,9 @@ class ActionImageTest(tf.test.TestCase):
 
     def test_create_dataset(self):
         """tests that action images are correctly created."""
-        rgbd = np.load('test_files/rgbd.npy')
-        points = np.load('test_files/points.npy')
-        success = np.load('test_files/success.npy')
+        rgbd = np.load('action_images/test_files/rgbd.npy')
+        points = np.load('action_images/test_files/points.npy')
+        success = np.load('action_images/test_files/success.npy')
 
         data = [[rgbd, points[0], points[1], points[2], points[3], success]]
 
@@ -101,16 +104,23 @@ class ActionImageTest(tf.test.TestCase):
 
         imgs = imgs[0]
 
-        self.assertAllEqual(imgs[0],
-                            np.load('test_files/generic_example/rgb.npy'))
         self.assertAllEqual(
-            imgs[1], np.load('test_files/generic_example/feature_rgb.npy'))
-        self.assertAllEqual(imgs[2],
-                            np.load('test_files/generic_example/depth.npy'))
+            imgs[0],
+            np.load('action_images/test_files/generic_example/rgb.npy'))
         self.assertAllEqual(
-            imgs[3], np.load('test_files/generic_example/feature_depth.npy'))
-        self.assertAllEqual(imgs[4],
-                            np.load('test_files/generic_example/target.npy'))
+            imgs[1],
+            np.load(
+                'action_images/test_files/generic_example/feature_rgb.npy'))
+        self.assertAllEqual(
+            imgs[2],
+            np.load('action_images/test_files/generic_example/depth.npy'))
+        self.assertAllEqual(
+            imgs[3],
+            np.load(
+                'action_images/test_files/generic_example/feature_depth.npy'))
+        self.assertAllEqual(
+            imgs[4],
+            np.load('action_images/test_files/generic_example/target.npy'))
 
 
 if __name__ == '__main__':

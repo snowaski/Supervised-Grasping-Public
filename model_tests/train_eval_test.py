@@ -59,13 +59,15 @@ class TrainEvalTest(tf.test.TestCase):
         """Tests that a simple model trains and exported models are valid."""
         gin.bind_parameter('tf.estimator.RunConfig.save_checkpoints_steps',
                            100)
-        model_dir = './tests/test_model'
+        model_dir = './model_tests/test_model'
         t2r_model = resnet_model.GraspingModel()
 
         input_generator_train = default_input_generator.DefaultRecordInputGenerator(
-            batch_size=_BATCH_SIZE, file_patterns='train.tfrecord')
+            batch_size=_BATCH_SIZE,
+            file_patterns='model_tests/test_files/train.tfrecord')
         input_generator_eval = default_input_generator.DefaultRecordInputGenerator(
-            batch_size=_BATCH_SIZE, file_patterns='test.tfrecord')
+            batch_size=_BATCH_SIZE,
+            file_patterns='model_tests/test_files/test.tfrecord')
 
         train_eval.train_eval_model(
             t2r_model=t2r_model,
@@ -118,9 +120,12 @@ class TrainEvalTest(tf.test.TestCase):
             numpy_predictions.append(predicted)
 
     def test_robot_error(self):
-        rgb = np.load('tests/test_files/error_example/rgb.npy')
-        feature_rgb = np.load('tests/test_files/error_example/feature_rgb.npy')
-        depth = np.load('tests/test_files/error_example/depth.npy').astype(np.float32)
+        rgb = np.load('model_tests/test_files/error_example/rgb.npy')
+        feature_rgb = np.load(
+            'model_tests/test_files/error_example/feature_rgb.npy')
+        depth = np.load(
+            'model_tests/test_files/error_example/depth.npy').astype(
+                np.float32)
 
         # for some reason there's a seg fault when feature_depth has zeros, so
         # the zeros are replaced with a decimal very close to zero.
@@ -132,29 +137,42 @@ class TrainEvalTest(tf.test.TestCase):
                     if feature_rgb[row, col, c] != 0:
                         feature_depth[row, col, c] = norms[c]
 
-        best_exporter_numpy_path = os.path.join('latest_model', 'export', 'latest_exporter_numpy', '*')
+        best_exporter_numpy_path = os.path.join('latest_model', 'export',
+                                                'latest_exporter_numpy', '*')
         numpy_model_paths = sorted(tf.io.gfile.glob(best_exporter_numpy_path))
-        numpy_predictor_fn = contrib_predictor.from_saved_model(numpy_model_paths[-1])
+        numpy_predictor_fn = contrib_predictor.from_saved_model(
+            numpy_model_paths[-1])
 
         data_no_target = {
-            'imgs/RGB': np.expand_dims(rgb, axis=0),
-            'imgs/Feature_RGB': np.expand_dims(feature_rgb, axis=0),
-            'imgs/Depth': np.expand_dims(tf.io.serialize_tensor(depth), axis=0),
-            'imgs/Feature_Depth': np.expand_dims(tf.io.serialize_tensor(feature_depth), axis=0),
+            'imgs/RGB':
+            np.expand_dims(rgb, axis=0),
+            'imgs/Feature_RGB':
+            np.expand_dims(feature_rgb, axis=0),
+            'imgs/Depth':
+            np.expand_dims(tf.io.serialize_tensor(depth), axis=0),
+            'imgs/Feature_Depth':
+            np.expand_dims(tf.io.serialize_tensor(feature_depth), axis=0),
         }
 
         data_target = {
-            'imgs/RGB': np.expand_dims(rgb, axis=0),
-            'imgs/Feature_RGB': np.expand_dims(feature_rgb, axis=0),
-            'imgs/Depth': np.expand_dims(tf.io.serialize_tensor(depth), axis=0),
-            'imgs/Feature_Depth': np.expand_dims(tf.io.serialize_tensor(feature_depth), axis=0),
-            'imgs/Target': np.expand_dims(rgb, axis=0)
+            'imgs/RGB':
+            np.expand_dims(rgb, axis=0),
+            'imgs/Feature_RGB':
+            np.expand_dims(feature_rgb, axis=0),
+            'imgs/Depth':
+            np.expand_dims(tf.io.serialize_tensor(depth), axis=0),
+            'imgs/Feature_Depth':
+            np.expand_dims(tf.io.serialize_tensor(feature_depth), axis=0),
+            'imgs/Target':
+            np.expand_dims(rgb, axis=0)
         }
 
         try:
-            predicted = numpy_predictor_fn(data_target)['grasp_success'].flatten()
+            predicted = numpy_predictor_fn(
+                data_target)['grasp_success'].flatten()
         except ValueError:
-            predicted = numpy_predictor_fn(data_no_target)['grasp_success'].flatten()
+            predicted = numpy_predictor_fn(
+                data_no_target)['grasp_success'].flatten()
 
         self.assertLessEqual(predicted, 0.001)
 
