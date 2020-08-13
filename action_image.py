@@ -288,6 +288,7 @@ def create_dataset(cipm: np.ndarray, data: list) -> Tuple[list, np.ndarray]:
             np.linalg.norm(feature_wrist)
         ]
         feature_depth = draw_feature_img(points, norms)
+        print(norms)
 
         # create target image
         if target is not None:
@@ -304,9 +305,6 @@ def create_dataset(cipm: np.ndarray, data: list) -> Tuple[list, np.ndarray]:
 
         depth = tf.expand_dims(rgbd[:, :, 3], axis=2)
         rgb = rgbd[:, :, :3]
-
-        imgs.append([rgb, feature_rgb, depth, feature_depth, target_img])
-        labels.append(success)
 
         # create imgs with photometric distortion
         for _ in range(2):
