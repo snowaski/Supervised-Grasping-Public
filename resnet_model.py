@@ -7,7 +7,6 @@ import film_resnet_model as resnet_lib
 from tensor2robot.layers import resnet
 from tensor2robot.preprocessors import image_transformations, abstract_preprocessor
 from typing import List, Tuple, Optional, Union, Callable
-from sklearn.preprocessing import normalize
 
 @gin.configurable
 class GraspingPreprocessorWithTarget(abstract_preprocessor.AbstractPreprocessor

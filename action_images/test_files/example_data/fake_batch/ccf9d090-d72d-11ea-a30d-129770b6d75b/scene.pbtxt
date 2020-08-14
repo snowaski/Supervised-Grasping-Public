@@ -1,0 +1,716 @@
+  groups {
+    name: "robot_group"
+    parent_pose_group {
+      rotation {
+        fixed {
+          z: 0.7071
+          w: 0.7071
+        }
+      }
+      translation {
+        fixed {
+          x: 158.2
+          y: 85.6
+          z: 0.1
+        }
+      }
+      value {
+        translation {
+          x: 158.2
+          y: 85.6
+          z: 0.1
+        }
+        rotation {
+          z: 0.7071067811865476
+          w: 0.7071067811865476
+        }
+      }
+    }
+    objects {
+      instance_name: "robot"
+      object_model {
+        format: URDF
+        filename: "third_party/blue/machine/hilo/mma/resources/urdf/meta/meta_sim.urdf"
+      }
+      parent_pose_object {
+        value {
+          translation {
+            x: 0.000118224
+            y: -4.0905e-05
+            z: -0.037266844
+          }
+          rotation {
+            x: 0.000321526
+            y: 0.000914862
+            z: 1.344e-05
+            w: 0.99999953
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_wheel_left"
+        joint_state {
+          position {
+            value {
+              value: -6.535279868170722e-05
+            }
+          }
+          velocity {
+            value {
+              value: -9.20050927394462e-06
+            }
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_wheel_right"
+        joint_state {
+          position {
+            value {
+              value: 9.399872685661684e-05
+            }
+          }
+          velocity {
+            value {
+              value: -5.194642030286594e-06
+            }
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_torso"
+        joint_state {
+          position {
+            value {
+              value: 0.11113549301543536
+            }
+          }
+          velocity {
+            value {
+              value: -1.498534746228752e-08
+            }
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_shoulder"
+        joint_state {
+          position {
+            value {
+              value: 1.026586333456156
+            }
+          }
+          velocity {
+            value {
+              value: -5.61185806145133e-08
+            }
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_bicep"
+        joint_state {
+          position {
+            value {
+              value: 1.0205531214051589
+            }
+          }
+          velocity {
+            value {
+              value: -6.684440398395531e-08
+            }
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_elbow"
+        joint_state {
+          position {
+            value {
+              value: 0.7431905191543637
+            }
+          }
+          velocity {
+            value {
+              value: -1.3368448668157884e-07
+            }
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_forearm"
+        joint_state {
+          position {
+            value {
+              value: -0.82169837285042
+            }
+          }
+          velocity {
+            value {
+              value: 2.9146405968377427e-08
+            }
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_wrist"
+        joint_state {
+          position {
+            value {
+              value: 1.6504999913196985
+            }
+          }
+          velocity {
+            value {
+              value: 2.813526456142671e-08
+            }
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_gripper"
+        joint_state {
+          position {
+            value {
+              value: -0.8427679643123202
+            }
+          }
+          velocity {
+            value {
+              value: 7.306535946782778e-09
+            }
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_finger_right"
+        joint_state {
+          position {
+            value {
+              value: 0.6549996798484665
+            }
+          }
+          velocity {
+            value {
+              value: -3.072802941732384e-08
+            }
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_finger_tip_right"
+        joint_state {
+          position {
+            value {
+              value: 0.19999988707503003
+            }
+          }
+          velocity {
+            value {
+              value: 3.576459371776314e-09
+            }
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_finger_left"
+        joint_state {
+          position {
+            value {
+              value: 0.654999892473969
+            }
+          }
+          velocity {
+            value {
+              value: 1.3597583131294097e-08
+            }
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_finger_tip_left"
+        joint_state {
+          position {
+            value {
+              value: 0.19999999533529703
+            }
+          }
+          velocity {
+            value {
+              value: -2.614456887010384e-09
+            }
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_head_pan"
+        joint_state {
+          position {
+            value {
+              value: 1.578748486593321e-07
+            }
+          }
+          velocity {
+            value {
+              value: 5.180100328271208e-08
+            }
+          }
+        }
+      }
+      properties {
+        object_name: "robot_group/robot/joint_head_tilt"
+        joint_state {
+          position {
+            value {
+              value: 0.9000000299437625
+            }
+          }
+          velocity {
+            value {
+              value: -4.0932562906062736e-09
+            }
+          }
+        }
+      }
+      load_params {
+        use_self_collision: true
+        use_implicit_cylinder: true
+      }
+      annotations {
+        tags {
+          key: "object_class"
+          string_value: "robot"
+        }
+      }
+    }
+    objects {
+      instance_name: "basket"
+      object_model {
+        format: URDF
+        filename: "third_party/blue/machine/hilo/mma/resources/urdf/meta/bin.urdf"
+      }
+      parent_pose_object {
+        rotation {
+          fixed {
+            z: 0.7071068
+            w: 0.7071068
+          }
+        }
+        translation {
+          fixed {
+            x: -0.3
+            z: 0.3
+          }
+        }
+        value {
+          translation {
+            x: -0.249476927
+            y: -0.000190041
+            z: 0.183246371
+          }
+          rotation {
+            x: 0.00031861
+            y: 0.000894001
+            z: 1.3744e-05
+            w: 0.99999955
+          }
+        }
+      }
+    }
+  }
+  groups {
+    name: "floor"
+    objects {
+      instance_name: "large_carpet"
+      object_model {
+        format: URDF
+        filename: "googlex/proxy/simulation/models/large_carpet/large_carpet.urdf"
+      }
+      parent_pose_object {
+        value {
+          translation {
+          }
+          rotation {
+            w: 1.0
+          }
+        }
+      }
+      load_params {
+        enable_sleeping: true
+        object_type: STATIC_OBJECT
+      }
+    }
+  }
+  groups {
+    name: "chess_board_table"
+    parent_pose_group {
+      rotation {
+        fixed {
+          w: 1.0
+        }
+      }
+      translation {
+        fixed {
+          x: 158.2
+          y: 86.13
+          z: 0.25
+        }
+      }
+      value {
+        translation {
+          x: 158.2
+          y: 86.13
+          z: 0.25
+        }
+        rotation {
+          w: 1.0
+        }
+      }
+    }
+    objects {
+      instance_name: "chess_board_table"
+      object_model {
+        format: URDF
+        filename: "third_party/robotics/models/objects/shapenet/modified/table/chess_board_table/chess_board_table.urdf"
+      }
+      parent_pose_object {
+        value {
+          translation {
+            x: 6.136e-06
+            y: 1.874e-06
+            z: -0.379829782
+          }
+          rotation {
+            x: -1.859e-06
+            y: -3e-08
+            z: 3.946e-06
+            w: 1.0
+          }
+        }
+      }
+      load_params {
+        enable_sleeping: true
+      }
+    }
+  }
+  groups {
+    objects {
+      instance_name: "loaded_model"
+      object_model {
+        format: URDF
+        filename: "/export/hda3/borglet/local_ram_fs_dirs/0.harshpa_run_chess_grasp_binary_16199590.408.x-proxy-ml.373401190944.8f4f9f98cb7a3055/mpm_chess_grasp_simbuilder_test_mpm_a7879cb04618cb1a/chess_grasp_simbuilder_test.runfiles/google3/third_party/robotics/models/objects/turbosquid/chess_pieces/rook_white.urdf"
+      }
+      parent_pose_object {
+        rotation {
+          fixed {
+            x: 0.686070091532677
+            y: 0.1711815748037906
+            z: 0.17118634079503556
+            w: 0.6860757499556772
+          }
+        }
+        translation {
+          fixed {
+            x: 158.08877102907906
+            y: 86.30050129637702
+            z: 0.4831119237295324
+          }
+        }
+        value {
+          translation {
+            x: 158.08899933
+            y: 86.300169948
+            z: 0.481811665
+          }
+          rotation {
+            x: 0.681209295
+            y: 0.189393685
+            z: 0.189583076
+            w: 0.681279815
+          }
+        }
+      }
+    }
+  }
+  groups {
+    objects {
+      instance_name: "loaded_model"
+      object_model {
+        format: URDF
+        filename: "/export/hda3/borglet/local_ram_fs_dirs/0.harshpa_run_chess_grasp_binary_16199590.408.x-proxy-ml.373401190944.8f4f9f98cb7a3055/mpm_chess_grasp_simbuilder_test_mpm_a7879cb04618cb1a/chess_grasp_simbuilder_test.runfiles/google3/third_party/robotics/models/objects/turbosquid/chess_pieces/knight_black.urdf"
+      }
+      parent_pose_object {
+        rotation {
+          fixed {
+            x: 0.626155338054274
+            y: 0.3285182835118624
+            z: 0.3285215767595601
+            w: 0.6261619627763813
+          }
+        }
+        translation {
+          fixed {
+            x: 158.15677052676492
+            y: 86.23250079407386
+            z: 0.48311291716460736
+          }
+        }
+        value {
+          translation {
+            x: 158.156753945
+            y: 86.231990201
+            z: 0.481805542
+          }
+          rotation {
+            x: 0.618248931
+            y: 0.34270777
+            z: 0.343015724
+            w: 0.618595067
+          }
+        }
+      }
+    }
+  }
+  groups {
+    objects {
+      instance_name: "loaded_model"
+      object_model {
+        format: URDF
+        filename: "/export/hda3/borglet/local_ram_fs_dirs/0.harshpa_run_chess_grasp_binary_16199590.408.x-proxy-ml.373401190944.8f4f9f98cb7a3055/mpm_chess_grasp_simbuilder_test_mpm_a7879cb04618cb1a/chess_grasp_simbuilder_test.runfiles/google3/third_party/robotics/models/objects/turbosquid/chess_pieces/knight_black.urdf"
+      }
+      parent_pose_object {
+        rotation {
+          fixed {
+            x: 0.7071035307801943
+            y: 0.0012311588620354517
+            z: 0.0012371453562633526
+            w: 0.7071078775387862
+          }
+        }
+        translation {
+          fixed {
+            x: 158.1567715313846
+            y: 86.36850079406759
+            z: 0.4831120831586857
+          }
+        }
+        value {
+          translation {
+            x: 158.15689308
+            y: 86.368093721
+            z: 0.481806307
+          }
+          rotation {
+            x: 0.707148817
+            y: 0.003319636
+            z: 0.003163486
+            w: 0.707049873
+          }
+        }
+      }
+    }
+  }
+  groups {
+    objects {
+      instance_name: "loaded_model"
+      object_model {
+        format: URDF
+        filename: "/export/hda3/borglet/local_ram_fs_dirs/0.harshpa_run_chess_grasp_binary_16199590.408.x-proxy-ml.373401190944.8f4f9f98cb7a3055/mpm_chess_grasp_simbuilder_test_mpm_a7879cb04618cb1a/chess_grasp_simbuilder_test.runfiles/google3/third_party/robotics/models/objects/turbosquid/chess_pieces/bishop_black.urdf"
+      }
+      parent_pose_object {
+        rotation {
+          fixed {
+            x: 0.3250322441014402
+            y: 0.6279748006455027
+            z: 0.6279737049151274
+            w: 0.32503956064422634
+          }
+        }
+        translation {
+          fixed {
+            x: 158.2247715313803
+            y: 86.36850029176128
+            z: 0.48311265959079985
+          }
+        }
+        value {
+          translation {
+            x: 158.22519878
+            y: 86.368151122
+            z: 0.481802425
+          }
+          rotation {
+            x: 0.29914437
+            y: 0.640628463
+            z: 0.640565751
+            w: 0.299638677
+          }
+        }
+      }
+    }
+  }
+  groups {
+    objects {
+      instance_name: "loaded_model"
+      object_model {
+        format: URDF
+        filename: "/export/hda3/borglet/local_ram_fs_dirs/0.harshpa_run_chess_grasp_binary_16199590.408.x-proxy-ml.373401190944.8f4f9f98cb7a3055/mpm_chess_grasp_simbuilder_test_mpm_a7879cb04618cb1a/chess_grasp_simbuilder_test.runfiles/google3/third_party/robotics/models/objects/turbosquid/chess_pieces/queen_white.urdf"
+      }
+      parent_pose_object {
+        rotation {
+          fixed {
+            x: -0.3703072022864162
+            y: 0.6023933450643513
+            z: 0.6023865118885523
+            w: -0.3703043667737824
+          }
+        }
+        translation {
+          fixed {
+            x: 158.08877052676922
+            y: 86.23250129638016
+            z: 0.4831123407324932
+          }
+        }
+        value {
+          translation {
+            x: 158.089049286
+            y: 86.232086219
+            z: 0.481808016
+          }
+          rotation {
+            x: 0.351315818
+            y: -0.613705519
+            z: -0.613727144
+            w: 0.351114974
+          }
+        }
+      }
+    }
+  }
+  groups {
+    objects {
+      instance_name: "loaded_model"
+      object_model {
+        format: URDF
+        filename: "/export/hda3/borglet/local_ram_fs_dirs/0.harshpa_run_chess_grasp_binary_16199590.408.x-proxy-ml.373401190944.8f4f9f98cb7a3055/mpm_chess_grasp_simbuilder_test_mpm_a7879cb04618cb1a/chess_grasp_simbuilder_test.runfiles/google3/third_party/robotics/models/objects/turbosquid/chess_pieces/queen_black.urdf"
+      }
+      parent_pose_object {
+        rotation {
+          fixed {
+            x: 0.6718277353211364
+            y: 0.2205504756727829
+            z: 0.22055481818296996
+            w: 0.6718337248978052
+          }
+        }
+        translation {
+          fixed {
+            x: 158.2247705267606
+            y: 86.23250029176755
+            z: 0.4831134935967215
+          }
+        }
+        value {
+          translation {
+            x: 158.224761014
+            y: 86.232048229
+            z: 0.481805533
+          }
+          rotation {
+            x: 0.666334535
+            y: 0.236162908
+            z: 0.236443408
+            w: 0.666573239
+          }
+        }
+      }
+    }
+  }
+  groups {
+    objects {
+      instance_name: "loaded_model"
+      object_model {
+        format: URDF
+        filename: "/export/hda3/borglet/local_ram_fs_dirs/0.harshpa_run_chess_grasp_binary_16199590.408.x-proxy-ml.373401190944.8f4f9f98cb7a3055/mpm_chess_grasp_simbuilder_test_mpm_a7879cb04618cb1a/chess_grasp_simbuilder_test.runfiles/google3/third_party/robotics/models/objects/turbosquid/chess_pieces/queen_black.urdf"
+      }
+      parent_pose_object {
+        rotation {
+          fixed {
+            x: 0.04718799366395129
+            y: 0.7055322584381178
+            z: 0.7055283318368021
+            w: 0.04719426376965242
+          }
+        }
+        translation {
+          fixed {
+            x: 158.22477102907047
+            y: 86.30050029176442
+            z: 0.4831130765937607
+          }
+        }
+        value {
+          translation {
+            x: 158.224938114
+            y: 86.299927096
+            z: 0.481806859
+          }
+          rotation {
+            x: 0.025696611
+            y: 0.706467368
+            z: 0.706816977
+            w: 0.025559785
+          }
+        }
+      }
+    }
+  }
+  groups {
+    objects {
+      instance_name: "loaded_model"
+      object_model {
+        format: URDF
+        filename: "/export/hda3/borglet/local_ram_fs_dirs/0.harshpa_run_chess_grasp_binary_16199590.408.x-proxy-ml.373401190944.8f4f9f98cb7a3055/mpm_chess_grasp_simbuilder_test_mpm_a7879cb04618cb1a/chess_grasp_simbuilder_test.runfiles/google3/third_party/robotics/models/objects/turbosquid/chess_pieces/pawn_white.urdf"
+      }
+      parent_pose_object {
+        rotation {
+          fixed {
+            x: 0.6075934349818397
+            y: 0.3616974291065563
+            z: 0.36170036153896584
+            w: 0.6076002271290377
+          }
+        }
+        translation {
+          fixed {
+            x: 158.15677102907475
+            y: 86.30050079407073
+            z: 0.48311250016164653
+          }
+        }
+        value {
+          translation {
+            x: 158.156939316
+            y: 86.300299997
+            z: 0.481793347
+          }
+          rotation {
+            x: 0.615247281
+            y: 0.348479084
+            z: 0.348592311
+            w: 0.615236956
+          }
+        }
+      }
+    }
+  }
+  file_paths: "/export/hda3/borglet/local_ram_fs_dirs/0.harshpa_run_chess_grasp_binary_16199590.408.x-proxy-ml.373401190944.8f4f9f98cb7a3055/mpm_chess_grasp_simbuilder_test_mpm_a7879cb04618cb1a/chess_grasp_simbuilder_test.runfiles/google3"
+  name: "Chess Board Empty Scene"
+  load_options {
+    skip_concretization: true
+  }
+  load_status {
+    scene_groups_resolved: true
+    concretized: true
+  }

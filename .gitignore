@@ -7,7 +7,6 @@ images.tfrecords
 data*
 test.tfrecord
 train.tfrecord
-test_train.tfrecord
 chess_action_image.py
 optimizer.py
 load_model.py

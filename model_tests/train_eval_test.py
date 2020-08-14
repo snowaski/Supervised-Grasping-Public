@@ -1,16 +1,17 @@
 import sys, os
-sys.path.append(os.path.abspath('.'))
-
 import gin
 import numpy as np
+import shutil
+import tensorflow.compat.v1 as tf
+sys.path.append(os.path.abspath('.'))
+
 import resnet_model
 from tensor2robot.input_generators import default_input_generator
-import tensorflow.compat.v1 as tf
 from tensor2robot.utils import train_eval
 from tensorflow.contrib import predictor as contrib_predictor
 from typing import Tuple, List
 
-_MAX_TRAIN_STEPS = 200
+_MAX_TRAIN_STEPS = 100
 _EVAL_STEPS = 40
 _BATCH_SIZE = 8
 _EVAL_THROTTLE_SECS = 0.0
@@ -64,10 +65,10 @@ class TrainEvalTest(tf.test.TestCase):
 
         input_generator_train = default_input_generator.DefaultRecordInputGenerator(
             batch_size=_BATCH_SIZE,
-            file_patterns='model_tests/test_files/train.tfrecord')
+            file_patterns='model_tests/test_files/testing_train.tfrecord')
         input_generator_eval = default_input_generator.DefaultRecordInputGenerator(
             batch_size=_BATCH_SIZE,
-            file_patterns='model_tests/test_files/test.tfrecord')
+            file_patterns='model_tests/test_files/testing_test.tfrecord')
 
         train_eval.train_eval_model(
             t2r_model=t2r_model,
@@ -118,6 +119,8 @@ class TrainEvalTest(tf.test.TestCase):
         for feature, label in zip(features, labels):
             predicted = numpy_predictor_fn(feature)['grasp_success'].flatten()
             numpy_predictions.append(predicted)
+
+        shutil.rmtree('model_tests/test_model')
 
     def test_robot_error(self):
         rgb = np.load('model_tests/test_files/error_example/rgb.npy')
