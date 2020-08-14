@@ -7,7 +7,7 @@ import film_resnet_model as resnet_lib
 from tensor2robot.layers import resnet
 from tensor2robot.preprocessors import image_transformations, abstract_preprocessor
 from typing import List, Tuple, Optional, Union, Callable
-
+from sklearn.preprocessing import normalize
 
 @gin.configurable
 class GraspingPreprocessorWithTarget(abstract_preprocessor.AbstractPreprocessor
@@ -33,8 +33,10 @@ class GraspingPreprocessorWithTarget(abstract_preprocessor.AbstractPreprocessor
                 adding additional tensors derived from the input features and labels.
         """
         features.imgs.RGB = tf.cast(features.imgs.RGB, tf.float32)
+        features.imgs.RGB /= 256
         features.imgs.Feature_RGB = tf.cast(features.imgs.Feature_RGB,
                                             tf.float32)
+        features.imgs.Feature_RGB /= 256
         features.imgs.Depth = tf.map_fn(lambda x: tf.ensure_shape(
             tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 1)),
                                         features.imgs.Depth,
@@ -44,6 +46,7 @@ class GraspingPreprocessorWithTarget(abstract_preprocessor.AbstractPreprocessor
                                                 features.imgs.Feature_Depth,
                                                 dtype=tf.float32)
         features.imgs.Target = tf.cast(features.imgs.Target, tf.float32)
+        features.imgs.Target /= 256
         return features, labels
 
     def get_in_feature_specification(self,
@@ -156,8 +159,10 @@ class GraspingPreprocessorWithoutTarget(
                 adding additional tensors derived from the input features and labels.
         """
         features.imgs.RGB = tf.cast(features.imgs.RGB, tf.float32)
+        features.imgs.RGB /= 256
         features.imgs.Feature_RGB = tf.cast(features.imgs.Feature_RGB,
                                             tf.float32)
+        features.imgs.Feature_RGB /= 256
         features.imgs.Depth = tf.map_fn(lambda x: tf.ensure_shape(
             tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 1)),
                                         features.imgs.Depth,
