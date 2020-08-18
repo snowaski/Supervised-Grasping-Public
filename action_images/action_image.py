@@ -227,7 +227,8 @@ def get_data(target: bool, balance: bool, data_dir: str = 'data/') -> list:
         balance_examples = 0
 
         for i, id in enumerate(csv['scenario_id']):
-            if balance and csv['grasp_success'][i] != bal and balance_examples >= example_limit:
+            if balance and csv['grasp_success'][
+                    i] != bal and balance_examples >= example_limit:
                 continue
             entry = []
             try:
@@ -305,7 +306,7 @@ def create_dataset(cipm: np.ndarray, data: list) -> Tuple[list, np.ndarray]:
 
         depth = tf.expand_dims(rgbd[:, :, 3], axis=2)
         rgb = rgbd[:, :, :3]
-        
+
         imgs.append([rgb, feature_rgb, depth, feature_depth, target_img])
         labels.append(success)
 

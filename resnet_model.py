@@ -9,6 +9,7 @@ from tensor2robot.preprocessors import image_transformations, abstract_preproces
 from typing import List, Tuple, Optional, Union, Callable
 from sklearn.preprocessing import normalize
 
+
 @gin.configurable
 class GraspingPreprocessorWithTarget(abstract_preprocessor.AbstractPreprocessor
                                      ):
@@ -44,17 +45,24 @@ class GraspingPreprocessorWithTarget(abstract_preprocessor.AbstractPreprocessor
                                         features.imgs.Depth,
                                         dtype=tf.float32)
         # isolate chess pieces from depth image
-        shift = tf.concat([tf.fill((8, 1, 128, 1), 10.0), features.imgs.Depth[:, 1:, :, :]], axis=1)
+        shift = tf.concat(
+            [tf.fill((8, 1, 128, 1), 10.0), features.imgs.Depth[:, 1:, :, :]],
+            axis=1)
 
         def check_depth(x):
-            return tf.cond(tf.math.less_equal(tf.squeeze(x[0]), tf.squeeze(x[1])), lambda: tf.reshape(tf.constant(0.0), (1,)), lambda: x[0])
-            
+            return tf.cond(
+                tf.math.less_equal(tf.squeeze(x[0]), tf.squeeze(x[1])),
+                lambda: tf.reshape(tf.constant(0.0), (1, )), lambda: x[0])
+
         def loop_cols(x):
             return tf.map_fn(check_depth, x, dtype=tf.float32)
 
         def loop_rows(x):
             return tf.map_fn(loop_cols, x, dtype=tf.float32)
-        features.imgs.Depth = tf.map_fn(loop_rows, (features.imgs.Depth, shift), dtype=tf.float32)
+
+        features.imgs.Depth = tf.map_fn(loop_rows,
+                                        (features.imgs.Depth, shift),
+                                        dtype=tf.float32)
 
         features.imgs.Feature_Depth = tf.map_fn(lambda x: tf.ensure_shape(
             tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 3)),
@@ -187,17 +195,24 @@ class GraspingPreprocessorWithoutTarget(
                                         features.imgs.Depth,
                                         dtype=tf.float32)
         # isolate chess pieces from depth image
-        shift = tf.concat([tf.fill((8, 1, 128, 1), 10.0), features.imgs.Depth[:, 1:, :, :]], axis=1)
-        
+        shift = tf.concat(
+            [tf.fill((8, 1, 128, 1), 10.0), features.imgs.Depth[:, 1:, :, :]],
+            axis=1)
+
         def check_depth(x):
-            return tf.cond(tf.math.less_equal(tf.squeeze(x[0]), tf.squeeze(x[1])), lambda: tf.reshape(tf.constant(0.0), (1,)), lambda: x[0])
-            
+            return tf.cond(
+                tf.math.less_equal(tf.squeeze(x[0]), tf.squeeze(x[1])),
+                lambda: tf.reshape(tf.constant(0.0), (1, )), lambda: x[0])
+
         def loop_cols(x):
             return tf.map_fn(check_depth, x, dtype=tf.float32)
 
         def loop_rows(x):
             return tf.map_fn(loop_cols, x, dtype=tf.float32)
-        features.imgs.Depth = tf.map_fn(loop_rows, (features.imgs.Depth, shift), dtype=tf.float32)
+
+        features.imgs.Depth = tf.map_fn(loop_rows,
+                                        (features.imgs.Depth, shift),
+                                        dtype=tf.float32)
 
         features.imgs.Feature_Depth = tf.map_fn(lambda x: tf.ensure_shape(
             tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 3)),
