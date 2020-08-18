@@ -140,9 +140,7 @@ def draw_feature_img(points: np.ndarray, value: list) -> np.ndarray:
     return np.concatenate(img, axis=2)
 
 
-def crop_imgs(points: np.ndarray, feature_rgb: np.ndarray,
-              feature_depth: np.ndarray,
-              rgbd: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def crop_imgs(points: np.ndarray, rgbd: np.ndarray) -> np.ndarray:
     """Crops the action images around point and target point.
 
     Args:
@@ -158,11 +156,11 @@ def crop_imgs(points: np.ndarray, feature_rgb: np.ndarray,
     points = np.sum(points, axis=0) / 3
     points = points.astype(np.int32)
 
-    feature_rgb = crop_to_target(points, feature_rgb, CROPPED_IMAGE_SIZE)
-    feature_depth = crop_to_target(points, feature_depth, CROPPED_IMAGE_SIZE)
+    # feature_rgb = crop_to_target(points, feature_rgb, CROPPED_IMAGE_SIZE)
+    # feature_depth = crop_to_target(points, feature_depth, CROPPED_IMAGE_SIZE)
     rgbd = crop_to_target(points, rgbd, CROPPED_IMAGE_SIZE)
 
-    return feature_rgb, feature_depth, rgbd
+    return rgbd
 
 
 def create_photometric_distortion_with_noise(rgb: np.ndarray) -> np.ndarray:
@@ -283,13 +281,13 @@ def create_dataset(cipm: np.ndarray, data: list) -> Tuple[list, np.ndarray]:
         points = project_points_to_image_space(points, cipm)
 
         # draw action images
-        feature_rgb = draw_feature_img(points, [255] * 3)
-        norms = [
-            np.linalg.norm(feature_left_finger),
-            np.linalg.norm(feature_right_finger),
-            np.linalg.norm(feature_wrist)
-        ]
-        feature_depth = draw_feature_img(points, norms)
+        # feature_rgb = draw_feature_img(points, [255] * 3)
+        # norms = [
+        #     np.linalg.norm(feature_left_finger),
+        #     np.linalg.norm(feature_right_finger),
+        #     np.linalg.norm(feature_wrist)
+        # ]
+        # feature_depth = draw_feature_img(points, norms)
 
         # create target image
         if target is not None:
@@ -301,13 +299,12 @@ def create_dataset(cipm: np.ndarray, data: list) -> Tuple[list, np.ndarray]:
             target_img = None
 
         # crop images
-        feature_rgb, feature_depth, rgbd = crop_imgs(points, feature_rgb,
-                                                     feature_depth, rgbd)
+        rgbd = crop_imgs(points, rgbd)
 
         depth = tf.expand_dims(rgbd[:, :, 3], axis=2)
         rgb = rgbd[:, :, :3]
 
-        imgs.append([rgb, feature_rgb, depth, feature_depth, target_img])
+        imgs.append([rgb, depth, target_img])
         labels.append(success)
 
         # create imgs with photometric distortion
@@ -317,7 +314,7 @@ def create_dataset(cipm: np.ndarray, data: list) -> Tuple[list, np.ndarray]:
                 target_img = create_photometric_distortion_with_noise(
                     target_img)
             imgs.append([
-                transformed_image, feature_rgb, depth, feature_depth,
+                transformed_image, depth,
                 target_img
             ])
             labels.append(success)
@@ -326,7 +323,7 @@ def create_dataset(cipm: np.ndarray, data: list) -> Tuple[list, np.ndarray]:
         if target is not None:
             target_img = create_photometric_distortion_no_noise(target_img)
         imgs.append(
-            [transformed_image, feature_rgb, depth, feature_depth, target_img])
+            [transformed_image, depth, target_img])
         labels.append(success)
 
     return imgs, np.array(labels)
@@ -342,24 +339,24 @@ def serialize(imgs: list, lbl: int) -> tf.train.Example:
     Returns:
         TFExample containing the passed in data.
     '''
-    rgb, feature_rgb, depth, feature_depth, target = imgs
+    rgb, depth, target = imgs
     rgb = tf.cast(rgb, tf.uint8)
     encoded_rgb = tf.io.encode_jpeg(rgb)
     if target is not None:
         target = tf.cast(target, tf.uint8)
         encoded_target = tf.io.encode_jpeg(target)
-    feature_rgb = tf.cast(feature_rgb, tf.uint8)
-    encoded_feature_rgb = tf.io.encode_jpeg(feature_rgb)
+    # feature_rgb = tf.cast(feature_rgb, tf.uint8)
+    # encoded_feature_rgb = tf.io.encode_jpeg(feature_rgb)
     depth = tf.cast(depth, tf.float32)
     encoded_depth = tf.io.serialize_tensor(depth)
-    feature_depth = tf.cast(feature_depth, tf.float32)
-    encoded_feature_depth = tf.io.serialize_tensor(feature_depth)
+    # feature_depth = tf.cast(feature_depth, tf.float32)
+    # encoded_feature_depth = tf.io.serialize_tensor(feature_depth)
 
     feature = {
         'rgb': _bytes_feature(encoded_rgb),
-        'feature_rgb': _bytes_feature(encoded_feature_rgb),
+        # 'feature_rgb': _bytes_feature(encoded_feature_rgb),
         'depth': _bytes_feature(encoded_depth),
-        'feature_depth': _bytes_feature(encoded_feature_depth),
+        # 'feature_depth': _bytes_feature(encoded_feature_depth),
         'grasp_success': _int64_feature(lbl)
     }
 

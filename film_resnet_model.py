@@ -566,12 +566,12 @@ class Model(object):
         Returns:
           A logits Tensor with shape [<batch_size>, self.num_classes].
         """
-        filters = [4, 8, [256, 32, 32], 8]
+        filters = [4, [256, 32, 32]]
         if include_target_img:
             filters.append(4)
         imgs = inputs
         inputs = [
-            inputs.RGB, inputs.Feature_RGB, inputs.Depth, inputs.Feature_Depth
+            inputs.RGB, inputs.Depth
         ]
         if include_target_img:
             inputs.append(imgs.Target)

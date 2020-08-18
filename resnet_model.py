@@ -36,38 +36,19 @@ class GraspingPreprocessorWithTarget(abstract_preprocessor.AbstractPreprocessor
         features.imgs.RGB = tf.cast(features.imgs.RGB, tf.float32)
         features.imgs.RGB /= 256
 
-        features.imgs.Feature_RGB = tf.cast(features.imgs.Feature_RGB,
-                                            tf.float32)
-        features.imgs.Feature_RGB /= 256
+        # features.imgs.Feature_RGB = tf.cast(features.imgs.Feature_RGB,
+        #                                     tf.float32)
+        # features.imgs.Feature_RGB /= 256
 
         features.imgs.Depth = tf.map_fn(lambda x: tf.ensure_shape(
             tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 1)),
                                         features.imgs.Depth,
                                         dtype=tf.float32)
-        # isolate chess pieces from depth image
-        shift = tf.concat(
-            [tf.fill((8, 1, 128, 1), 10.0), features.imgs.Depth[:, 1:, :, :]],
-            axis=1)
 
-        def check_depth(x):
-            return tf.cond(
-                tf.math.less_equal(tf.squeeze(x[0]), tf.squeeze(x[1])),
-                lambda: tf.reshape(tf.constant(0.0), (1, )), lambda: x[0])
-
-        def loop_cols(x):
-            return tf.map_fn(check_depth, x, dtype=tf.float32)
-
-        def loop_rows(x):
-            return tf.map_fn(loop_cols, x, dtype=tf.float32)
-
-        features.imgs.Depth = tf.map_fn(loop_rows,
-                                        (features.imgs.Depth, shift),
-                                        dtype=tf.float32)
-
-        features.imgs.Feature_Depth = tf.map_fn(lambda x: tf.ensure_shape(
-            tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 3)),
-                                                features.imgs.Feature_Depth,
-                                                dtype=tf.float32)
+        # features.imgs.Feature_Depth = tf.map_fn(lambda x: tf.ensure_shape(
+        #     tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 3)),
+        #                                         features.imgs.Feature_Depth,
+        #                                         dtype=tf.float32)
 
         features.imgs.Target = tf.cast(features.imgs.Target, tf.float32)
         features.imgs.Target /= 256
@@ -88,16 +69,16 @@ class GraspingPreprocessorWithTarget(abstract_preprocessor.AbstractPreprocessor
                                                     dtype=tf.uint8,
                                                     name='rgb',
                                                     data_format='jpeg')
-        spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(shape=(128, 128,
-                                                                   3),
-                                                            dtype=tf.uint8,
-                                                            name='feature_rgb',
-                                                            data_format='jpeg')
+        # spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(shape=(128, 128,
+        #                                                            3),
+        #                                                     dtype=tf.uint8,
+        #                                                     name='feature_rgb',
+        #                                                     data_format='jpeg')
         spec['imgs/Depth'] = utils.ExtendedTensorSpec(shape=(),
                                                       dtype=tf.string,
                                                       name='depth')
-        spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
-            shape=(), dtype=tf.string, name='feature_depth')
+        # spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
+        #     shape=(), dtype=tf.string, name='feature_depth')
         spec['imgs/Target'] = utils.ExtendedTensorSpec(shape=(128, 128, 3),
                                                        dtype=tf.uint8,
                                                        name='target',
@@ -130,16 +111,16 @@ class GraspingPreprocessorWithTarget(abstract_preprocessor.AbstractPreprocessor
         spec['imgs/RGB'] = utils.ExtendedTensorSpec(shape=(128, 128, 3),
                                                     dtype=tf.float32,
                                                     name='rgb')
-        spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(shape=(128, 128,
-                                                                   3),
-                                                            dtype=tf.float32,
-                                                            name='feature_rgb',
-                                                            data_format='jpeg')
+        # spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(shape=(128, 128,
+        #                                                            3),
+        #                                                     dtype=tf.float32,
+        #                                                     name='feature_rgb',
+        #                                                     data_format='jpeg')
         spec['imgs/Depth'] = utils.ExtendedTensorSpec(shape=(128, 128, 1),
                                                       dtype=tf.float32,
                                                       name='depth')
-        spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
-            shape=(128, 128, 3), dtype=tf.float32, name='feature_depth')
+        # spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
+        #     shape=(128, 128, 3), dtype=tf.float32, name='feature_depth')
         spec['imgs/Target'] = utils.ExtendedTensorSpec(shape=(128, 128, 3),
                                                        dtype=tf.float32,
                                                        name='target',
@@ -186,38 +167,19 @@ class GraspingPreprocessorWithoutTarget(
         features.imgs.RGB = tf.cast(features.imgs.RGB, tf.float32)
         features.imgs.RGB /= 256
 
-        features.imgs.Feature_RGB = tf.cast(features.imgs.Feature_RGB,
-                                            tf.float32)
-        features.imgs.Feature_RGB /= 256
+        # features.imgs.Feature_RGB = tf.cast(features.imgs.Feature_RGB,
+        #                                     tf.float32)
+        # features.imgs.Feature_RGB /= 256
 
         features.imgs.Depth = tf.map_fn(lambda x: tf.ensure_shape(
             tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 1)),
                                         features.imgs.Depth,
                                         dtype=tf.float32)
-        # isolate chess pieces from depth image
-        shift = tf.concat(
-            [tf.fill((8, 1, 128, 1), 10.0), features.imgs.Depth[:, 1:, :, :]],
-            axis=1)
 
-        def check_depth(x):
-            return tf.cond(
-                tf.math.less_equal(tf.squeeze(x[0]), tf.squeeze(x[1])),
-                lambda: tf.reshape(tf.constant(0.0), (1, )), lambda: x[0])
-
-        def loop_cols(x):
-            return tf.map_fn(check_depth, x, dtype=tf.float32)
-
-        def loop_rows(x):
-            return tf.map_fn(loop_cols, x, dtype=tf.float32)
-
-        features.imgs.Depth = tf.map_fn(loop_rows,
-                                        (features.imgs.Depth, shift),
-                                        dtype=tf.float32)
-
-        features.imgs.Feature_Depth = tf.map_fn(lambda x: tf.ensure_shape(
-            tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 3)),
-                                                features.imgs.Feature_Depth,
-                                                dtype=tf.float32)
+        # features.imgs.Feature_Depth = tf.map_fn(lambda x: tf.ensure_shape(
+        #     tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 3)),
+        #                                         features.imgs.Feature_Depth,
+        #                                         dtype=tf.float32)
 
         return features, labels
 
@@ -235,16 +197,16 @@ class GraspingPreprocessorWithoutTarget(
                                                     dtype=tf.uint8,
                                                     name='rgb',
                                                     data_format='jpeg')
-        spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(shape=(128, 128,
-                                                                   3),
-                                                            dtype=tf.uint8,
-                                                            name='feature_rgb',
-                                                            data_format='jpeg')
+        # spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(shape=(128, 128,
+        #                                                            3),
+        #                                                     dtype=tf.uint8,
+        #                                                     name='feature_rgb',
+        #                                                     data_format='jpeg')
         spec['imgs/Depth'] = utils.ExtendedTensorSpec(shape=(),
                                                       dtype=tf.string,
                                                       name='depth')
-        spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
-            shape=(), dtype=tf.string, name='feature_depth')
+        # spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
+        #     shape=(), dtype=tf.string, name='feature_depth')
         return spec
 
     def get_in_label_specification(self, mode: str) -> utils.TensorSpecStruct:
@@ -273,16 +235,16 @@ class GraspingPreprocessorWithoutTarget(
         spec['imgs/RGB'] = utils.ExtendedTensorSpec(shape=(128, 128, 3),
                                                     dtype=tf.float32,
                                                     name='rgb')
-        spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(shape=(128, 128,
-                                                                   3),
-                                                            dtype=tf.float32,
-                                                            name='feature_rgb',
-                                                            data_format='jpeg')
+        # spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(shape=(128, 128,
+        #                                                            3),
+        #                                                     dtype=tf.float32,
+        #                                                     name='feature_rgb',
+        #                                                     data_format='jpeg')
         spec['imgs/Depth'] = utils.ExtendedTensorSpec(shape=(128, 128, 1),
                                                       dtype=tf.float32,
                                                       name='depth')
-        spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
-            shape=(128, 128, 3), dtype=tf.float32, name='feature_depth')
+        # spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
+        #     shape=(128, 128, 3), dtype=tf.float32, name='feature_depth')
         return spec
 
     def get_out_label_specification(self, mode: str) -> utils.TensorSpecStruct:
@@ -327,16 +289,16 @@ class GraspingModel(abstract_model.AbstractT2RModel):
         spec['imgs/RGB'] = utils.ExtendedTensorSpec(shape=(128, 128, 3),
                                                     dtype=tf.float32,
                                                     name='rgb')
-        spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(shape=(128, 128,
-                                                                   3),
-                                                            dtype=tf.float32,
-                                                            name='feature_rgb',
-                                                            data_format='jpeg')
+        # spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(shape=(128, 128,
+        #                                                            3),
+        #                                                     dtype=tf.float32,
+        #                                                     name='feature_rgb',
+        #                                                     data_format='jpeg')
         spec['imgs/Depth'] = utils.ExtendedTensorSpec(shape=(128, 128, 1),
                                                       dtype=tf.float32,
                                                       name='depth')
-        spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
-            shape=(128, 128, 3), dtype=tf.float32, name='feature_depth')
+        # spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
+        #     shape=(128, 128, 3), dtype=tf.float32, name='feature_depth')
         if self.include_target_img:
             spec['imgs/Target'] = utils.ExtendedTensorSpec(shape=(128, 128, 3),
                                                            dtype=tf.float32,
@@ -507,11 +469,11 @@ class GraspingModel(abstract_model.AbstractT2RModel):
         tf.summary.scalar('accuracy', acc)
 
         tf.summary.image('RGB', features['imgs/RGB'], max_outputs=8)
-        tf.summary.image('Feature_RGB',
-                         features['imgs/Feature_RGB'],
-                         max_outputs=8)
+        # tf.summary.image('Feature_RGB',
+        #                  features['imgs/Feature_RGB'],
+        #                  max_outputs=8)
         tf.summary.image('Depth', features['imgs/Depth'])
-        tf.summary.image('Feature_Depth', features['imgs/Feature_Depth'])
+        # tf.summary.image('Feature_Depth', features['imgs/Feature_Depth'])
         if self.include_target_img:
             tf.summary.image('Target', features['imgs/Target'])
 
