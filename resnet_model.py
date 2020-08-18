@@ -219,11 +219,6 @@ class GraspingPreprocessorWithoutTarget(
                                                 features.imgs.Feature_Depth,
                                                 dtype=tf.float32)
 
-        features.imgs.Feature_Depth = tf.map_fn(lambda x: tf.ensure_shape(
-            tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 3)),
-                                                features.imgs.Feature_Depth,
-                                                dtype=tf.float32)
-
         return features, labels
 
     def get_in_feature_specification(self,
