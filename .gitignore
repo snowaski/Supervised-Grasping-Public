@@ -5,8 +5,8 @@ model_old.py
 T2R.py
 images.tfrecords
 data*
-test.tfrecord
-train.tfrecord
+# test.tfrecord
+# train.tfrecord
 test_train.tfrecord
 chess_action_image.py
 optimizer.py
