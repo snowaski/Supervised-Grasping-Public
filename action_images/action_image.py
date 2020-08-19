@@ -224,11 +224,11 @@ def get_data(target: bool, balance: bool, data_dir: str = 'data/') -> list:
         bal = not (csv['grasp_success'].value_counts()[True] >
                    csv['grasp_success'].value_counts()[False])
         example_limit = csv['grasp_success'].value_counts()[bal]
+
         balance_examples = 0
 
         for i, id in enumerate(csv['scenario_id']):
-            if balance and csv['grasp_success'][
-                    i] != bal and balance_examples >= example_limit:
+            if balance and csv['grasp_success'][i] != bal and balance_examples >= example_limit:
                 continue
             entry = []
             try:
