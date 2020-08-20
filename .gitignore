@@ -11,7 +11,7 @@ test_train.tfrecord
 chess_action_image.py
 optimizer.py
 load_model.py
-# tensor2robot/
+tensor2robot/
 .mypy_cache
 .vscode
 7-*

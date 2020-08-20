@@ -122,7 +122,7 @@ class ActionImageTest(tf.test.TestCase):
             imgs[4],
             np.load('action_images/test_files/generic_example/target.npy'))
 
-    def test_create_dataset_with_target(self):
+    def test_create_dataset_without_target(self):
         """tests that action images are correctly created."""
         rgbd = np.load('action_images/test_files/rgbd.npy')
         points = np.load('action_images/test_files/points.npy')
@@ -154,7 +154,7 @@ class ActionImageTest(tf.test.TestCase):
 
     def test_get_data_with_balance(self):
         """tests that get_data balances the positive and negative examples"""
-        data = action.get_data(True, True, './action_images/test_files/example_data')
+        data = action.get_data(True, True, False, './action_images/test_files/example_data')
         pos = 0
         neg = 0
 

@@ -17,40 +17,7 @@ _BATCH_SIZE = 8
 _EVAL_THROTTLE_SECS = 0.0
 
 
-def create_dummy_data_target() -> Tuple[List[dict], np.ndarray]:
-    """creates dummy data to test model."""
-    features = []
-    for _ in range(_BATCH_SIZE):
-        entry = {
-            'imgs/RGB':
-            np.random.randint(0,
-                              high=256,
-                              size=(1, 128, 128, 3),
-                              dtype=np.uint8),
-            'imgs/Feature_RGB':
-            np.random.randint(0,
-                              high=256,
-                              size=(1, 128, 128, 3),
-                              dtype=np.uint8),
-            'imgs/Depth':
-            np.expand_dims(tf.io.serialize_tensor(
-                np.random.randn(128, 128, 1).astype(np.float32)).numpy(),
-                           axis=0),
-            'imgs/Feature_Depth':
-            np.expand_dims(tf.io.serialize_tensor(
-                np.random.randn(128, 128, 3).astype(np.float32)).numpy(),
-                           axis=0),
-            'imgs/Target':
-            np.random.randint(0,
-                              high=256,
-                              size=(1, 128, 128, 3),
-                              dtype=np.uint8)
-        }
-        features.append(entry)
-
-    return features, np.random.randint(0, 2, size=(_BATCH_SIZE))
-
-def create_dummy_data_no_target() -> Tuple[List[dict], np.ndarray]:
+def create_dummy_data(target: bool) -> Tuple[List[dict], np.ndarray]:
     """creates dummy data to test model."""
     features = []
     for _ in range(_BATCH_SIZE):
@@ -74,6 +41,11 @@ def create_dummy_data_no_target() -> Tuple[List[dict], np.ndarray]:
                 np.random.randn(128, 128, 3).astype(np.float32)).numpy(),
                            axis=0),
         }
+        if target:
+            entry['imgs/Target'] = np.random.randint(0,
+                                                     high=256,
+                                                     size=(1, 128, 128, 3),
+                                                     dtype=np.uint8)
         features.append(entry)
 
     return features, np.random.randint(0, 2, size=(_BATCH_SIZE))
@@ -141,7 +113,7 @@ class TrainEvalTest(tf.test.TestCase):
         numpy_predictor_fn = contrib_predictor.from_saved_model(
             numpy_model_paths[-1])
 
-        features, labels = create_dummy_data_target()
+        features, labels = create_dummy_data(target=True)
 
         numpy_predictions = []
         for feature, label in zip(features, labels):
@@ -155,7 +127,8 @@ class TrainEvalTest(tf.test.TestCase):
         gin.bind_parameter('tf.estimator.RunConfig.save_checkpoints_steps',
                            100)
         model_dir = './model_tests/test_model'
-        t2r_model = resnet_model.GraspingModel(include_target_img=False, include_height_map=False)
+        t2r_model = resnet_model.GraspingModel(include_target_img=False,
+                                               include_height_map=False)
 
         input_generator_train = default_input_generator.DefaultRecordInputGenerator(
             batch_size=_BATCH_SIZE,
@@ -207,7 +180,7 @@ class TrainEvalTest(tf.test.TestCase):
         numpy_predictor_fn = contrib_predictor.from_saved_model(
             numpy_model_paths[-1])
 
-        features, labels = create_dummy_data_no_target()
+        features, labels = create_dummy_data(target=False)
 
         numpy_predictions = []
         for feature, label in zip(features, labels):

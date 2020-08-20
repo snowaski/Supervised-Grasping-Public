@@ -207,6 +207,7 @@ def get_data(target: bool, balance: bool, height_map: bool, data_dir: str = 'dat
     Args:
         target: determines whether to include a target image or not.
         balance: determines whether or not to balance the negative and positive examples.
+        height_map: determines whether to include a height map image.
         data_dir: the directory path where the data is.
 
     Returns:
@@ -228,13 +229,14 @@ def get_data(target: bool, balance: bool, height_map: bool, data_dir: str = 'dat
         balance_examples = 0
 
         for i, id in enumerate(csv['scenario_id']):
-            if balance and csv['grasp_success'][i] != bal and balance_examples >= example_limit:
+            success = csv['grasp_success'][i] and not csv['pieces_knocked_over'][i]
+            if balance and balance_examples >= example_limit and success != bal :
                 continue
             entry = []
             try:
                 entry.append(
                     np.load(f'{data_dir}/{d}/{id}/rgbd.data')['arr_0'])
-            except:
+            except FileNotFoundError:
                 continue
 
             entry.append(
@@ -250,9 +252,7 @@ def get_data(target: bool, balance: bool, height_map: bool, data_dir: str = 'dat
             else:
                 entry.append(None)
 
-            # determine success
-            entry.append(csv['grasp_success'][i]
-                         and not csv['pieces_knocked_over'][i])
+            entry.append(success)
 
             if entry[-1] != bal:
                 balance_examples += 1
@@ -395,18 +395,18 @@ if __name__ == '__main__':
     parser.add_argument(
         "--target",
         action='store_true',
-        help='determines whether to include a target action image')
+        help='determines whether to include a target action image.')
     parser.add_argument(
         "--balance",
         action='store_true',
-        help='determines whether to balance positive and negative examples')
+        help='determines whether to balance positive and negative examples.')
     parser.add_argument("--data-dir",
                         default="data/",
-                        help='the directory to find data')
+                        help='the directory to find data.')
     parser.add_argument(
         "--height-map",
         action='store_true',
-        help='determines whether to include a top down height map of the piece')
+        help='determines whether to include a top down height map of the piece.')
     args = parser.parse_args()
 
     tf.enable_eager_execution()
