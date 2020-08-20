@@ -262,13 +262,14 @@ def get_data(target: bool, balance: bool, data_dir: str = 'data/') -> list:
     return data
 
 
-def create_dataset(cipm: np.ndarray, data: list) -> Tuple[list, np.ndarray]:
+def create_dataset(cipm: np.ndarray, data: list, isolate_depth: bool) -> Tuple[list, np.ndarray]:
     '''transforms the data into action images, with rgb, depth, feature_rgb,
     feature_depth, and target images.
 
     Args:
         cipm: the camera intrinsic projection matrix.
         data: a list containg list with rgbd data, 3D points, and the success of the entry.
+        isolate_depth: whether to isolate the chess pieces from the depth image.
 
     Returns:
         a Tuple[list, np.ndarray] with the action images and their labels.
@@ -306,6 +307,13 @@ def create_dataset(cipm: np.ndarray, data: list) -> Tuple[list, np.ndarray]:
 
         depth = tf.expand_dims(rgbd[:, :, 3], axis=2)
         rgb = rgbd[:, :, :3]
+        
+        if isolate_depth:
+            depth = depth.numpy()
+            for c in range(127, 0, -1):
+                for r in range(127, 0, -1):
+                    if depth[r, c, 0] <= depth[r-1, c, 0]:
+                        depth[r, c, 0] = 0
 
         imgs.append([rgb, feature_rgb, depth, feature_depth, target_img])
         labels.append(success)
@@ -395,14 +403,18 @@ if __name__ == '__main__':
     parser.add_argument(
         "--target",
         action='store_true',
-        help='determines whether to include a target action image')
+        help='determines whether to include a target action image.')
     parser.add_argument(
         "--balance",
         action='store_true',
-        help='determines whether to balance positive and negative examples')
+        help='determines whether to balance positive and negative examples.')
+    parser.add_argument(
+        "--isolate-depth",
+        action='store_true',
+        help='determines whether to isolate chess pieces from depth image.')
     parser.add_argument("--data-dir",
                         default="data/",
-                        help='the directory to find data')
+                        help='the directory to find data.')
     args = parser.parse_args()
 
     tf.enable_eager_execution()
@@ -412,7 +424,7 @@ if __name__ == '__main__':
                      [0, 0, 1]])
 
     data = get_data(args.target, args.balance, args.data_dir)
-    imgs, labels = create_dataset(cipm, data)
+    imgs, labels = create_dataset(cipm, data, args.isolate_depth)
     print(len(imgs))
 
     X_train, X_test, y_train, y_test = train_test_split(imgs,
