@@ -552,6 +552,7 @@ class Model(object):
                  inputs: utils.TensorSpecStruct,
                  training: bool,
                  include_target_img: bool,
+                 include_height_map: bool,
                  film_generator_fn: Optional[Callable] = None,
                  film_generator_input: Optional[Callable] = None) -> tf.Tensor:
         """Add operations to classify a batch of input images.
@@ -569,12 +570,16 @@ class Model(object):
         filters = [4, 8, [256, 32, 32], 8]
         if include_target_img:
             filters.append(4)
+        if include_height_map:
+            filters.append([256, 32, 32])
         imgs = inputs
         inputs = [
             inputs.RGB, inputs.Feature_RGB, inputs.Depth, inputs.Feature_Depth
         ]
         if include_target_img:
             inputs.append(imgs.Target)
+        if include_height_map:
+            inputs.append(imgs.Height_Map)
         with self._model_variable_scope():
             if self.data_format == 'channels_first':
                 # Convert the inputs from channels_last (NHWC) to channels_first (NCHW).

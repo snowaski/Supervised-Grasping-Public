@@ -89,7 +89,7 @@ class TrainEvalTest(tf.test.TestCase):
         gin.bind_parameter('tf.estimator.RunConfig.save_checkpoints_steps',
                            100)
         model_dir = './model_tests/test_model'
-        t2r_model = resnet_model.GraspingModel()
+        t2r_model = resnet_model.GraspingModel(include_height_map=False)
 
         input_generator_train = default_input_generator.DefaultRecordInputGenerator(
             batch_size=_BATCH_SIZE,
@@ -150,12 +150,12 @@ class TrainEvalTest(tf.test.TestCase):
 
         shutil.rmtree(model_dir)
 
-    def test_no_target_model(self):
+    def test_no_target_no_height_map_model(self):
         """Tests that a simple model trains and exported models are valid."""
         gin.bind_parameter('tf.estimator.RunConfig.save_checkpoints_steps',
                            100)
         model_dir = './model_tests/test_model'
-        t2r_model = resnet_model.GraspingModel(include_target_img=False)
+        t2r_model = resnet_model.GraspingModel(include_target_img=False, include_height_map=False)
 
         input_generator_train = default_input_generator.DefaultRecordInputGenerator(
             batch_size=_BATCH_SIZE,

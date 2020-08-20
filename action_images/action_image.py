@@ -201,7 +201,7 @@ def create_photometric_distortion_no_noise(rgb: np.ndarray) -> np.ndarray:
     return image[0] * 256
 
 
-def get_data(target: bool, balance: bool, data_dir: str = 'data/') -> list:
+def get_data(target: bool, balance: bool, height_map: bool, data_dir: str = 'data/') -> list:
     """Extracts the data from data_dir using data.csv.
 
     Args:
@@ -403,6 +403,10 @@ if __name__ == '__main__':
     parser.add_argument("--data-dir",
                         default="data/",
                         help='the directory to find data')
+    parser.add_argument(
+        "--height-map",
+        action='store_true',
+        help='determines whether to include a top down height map of the piece')
     args = parser.parse_args()
 
     tf.enable_eager_execution()
@@ -411,7 +415,7 @@ if __name__ == '__main__':
                      [0, 739.22373806060455 / 2, 512.44139003753662 / 2],
                      [0, 0, 1]])
 
-    data = get_data(args.target, args.balance, args.data_dir)
+    data = get_data(args.target, args.balance, args.height_map, args.data_dir)
     imgs, labels = create_dataset(cipm, data)
     print(len(imgs))
 
