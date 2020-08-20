@@ -381,9 +381,6 @@ def _block_layer(inputs: utils.TensorSpecStruct, filters: int,
     Returns:
       The output tensor of the block layer.
     """
-    # if blocks != len(film_gamma_betas):
-    #   raise ValueError('film_gamma_betas has length {}, expected {}'.format(
-    #       len(film_gamma_betas), blocks))
 
     # Bottleneck blocks end with 4x the number of filters as they start with
     filters_out = filters * 4 if bottleneck else filters
@@ -585,7 +582,8 @@ class Model(object):
                 # Convert the inputs from channels_last (NHWC) to channels_first (NCHW).
                 # This provides a large performance boost on GPU. See
                 # https://www.tensorflow.org/performance/performance_guide#data_formats
-                inputs = tf.transpose(a=inputs, perm=[0, 3, 1, 2])
+                for i, img in enumerate(inputs):
+                    inputs[i] = tf.transpose(a=img, perm=[0, 3, 1, 2])
             imgs = []
             for i, f in enumerate(filters):
                 if type(f) is list:
