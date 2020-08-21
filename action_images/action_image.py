@@ -140,31 +140,6 @@ def draw_feature_img(points: np.ndarray, value: list) -> np.ndarray:
     return np.concatenate(img, axis=2)
 
 
-def crop_imgs(points: np.ndarray, feature_rgb: np.ndarray,
-              feature_depth: np.ndarray,
-              rgbd: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Crops the action images around point and target point.
-
-    Args:
-        points: the grasp candidate points to crop around.
-        feature_rgb: the feature rgb image.
-        feature_depth: the feature_depth image.
-        rgbd: the rgbd image.
-
-    Returns:
-        a tuple of cropped np array images.
-    """
-    points = np.squeeze(points)
-    points = np.sum(points, axis=0) / 3
-    points = points.astype(np.int32)
-
-    feature_rgb = crop_to_target(points, feature_rgb, CROPPED_IMAGE_SIZE)
-    feature_depth = crop_to_target(points, feature_depth, CROPPED_IMAGE_SIZE)
-    rgbd = crop_to_target(points, rgbd, CROPPED_IMAGE_SIZE)
-
-    return feature_rgb, feature_depth, rgbd
-
-
 def create_photometric_distortion_with_noise(rgb: np.ndarray) -> np.ndarray:
     """Creates a new image based on rgbd with photomoetric distortion, 
     including gaussian noise.
