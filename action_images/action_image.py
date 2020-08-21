@@ -10,8 +10,6 @@ from sklearn.model_selection import train_test_split
 from tensor2robot.preprocessors import image_transformations
 from typing import List, Tuple, Optional
 
-from matplotlib import pyplot as plt
-
 CROPPED_IMAGE_SIZE = (128, 128)
 
 
