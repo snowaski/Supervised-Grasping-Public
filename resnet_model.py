@@ -16,12 +16,14 @@ class GraspingPreprocessor(abstract_preprocessor.AbstractPreprocessor):
                  model_label_specification_fn: Callable = None,
                  is_model_device_tpu: bool = False,
                  include_target_img: bool = True,
-                 include_height_map: bool = True):
+                 include_height_map: bool = True,
+                 include_action_imgs: bool = True):
         super(GraspingPreprocessor,
               self).__init__(model_feature_specification_fn,
                              model_label_specification_fn, is_model_device_tpu)
         self.include_target_img = include_target_img
         self.include_height_map = include_height_map
+        self.include_action_imgs = include_action_imgs
 
     def _preprocess_fn(
             self, features: utils.TensorSpecStruct,
@@ -46,19 +48,22 @@ class GraspingPreprocessor(abstract_preprocessor.AbstractPreprocessor):
         features.imgs.RGB = tf.cast(features.imgs.RGB, tf.float32)
         features.imgs.RGB /= 256
 
-        features.imgs.Feature_RGB = tf.cast(features.imgs.Feature_RGB,
-                                            tf.float32)
-        features.imgs.Feature_RGB /= 256
+        if self.include_action_imgs:
+            features.imgs.Feature_RGB = tf.cast(features.imgs.Feature_RGB,
+                                                tf.float32)
+            features.imgs.Feature_RGB /= 256
 
         features.imgs.Depth = tf.map_fn(lambda x: tf.ensure_shape(
             tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 1)),
                                         features.imgs.Depth,
                                         dtype=tf.float32)
 
-        features.imgs.Feature_Depth = tf.map_fn(lambda x: tf.ensure_shape(
-            tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 3)),
-                                                features.imgs.Feature_Depth,
-                                                dtype=tf.float32)
+        if self.include_action_imgs:
+            features.imgs.Feature_Depth = tf.map_fn(
+                lambda x: tf.ensure_shape(
+                    tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 3)),
+                features.imgs.Feature_Depth,
+                dtype=tf.float32)
 
         if self.include_target_img:
             features.imgs.Target = tf.cast(features.imgs.Target, tf.float32)
@@ -67,8 +72,8 @@ class GraspingPreprocessor(abstract_preprocessor.AbstractPreprocessor):
         if self.include_height_map:
             features.imgs.Height_Map = tf.map_fn(lambda x: tf.ensure_shape(
                 tf.io.parse_tensor(x, out_type=tf.float32), (128, 128, 1)),
-                                        features.imgs.Height_Map,
-                                        dtype=tf.float32)
+                                                 features.imgs.Height_Map,
+                                                 dtype=tf.float32)
         return features, labels
 
     def get_in_feature_specification(self,
@@ -85,16 +90,18 @@ class GraspingPreprocessor(abstract_preprocessor.AbstractPreprocessor):
                                                     dtype=tf.uint8,
                                                     name='rgb',
                                                     data_format='jpeg')
-        spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(shape=(128, 128,
-                                                                   3),
-                                                            dtype=tf.uint8,
-                                                            name='feature_rgb',
-                                                            data_format='jpeg')
+        if self.include_action_imgs:
+            spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(
+                shape=(128, 128, 3),
+                dtype=tf.uint8,
+                name='feature_rgb',
+                data_format='jpeg')
         spec['imgs/Depth'] = utils.ExtendedTensorSpec(shape=(),
                                                       dtype=tf.string,
                                                       name='depth')
-        spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
-            shape=(), dtype=tf.string, name='feature_depth')
+        if self.include_action_imgs:
+            spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
+                shape=(), dtype=tf.string, name='feature_depth')
         if self.include_target_img:
             spec['imgs/Target'] = utils.ExtendedTensorSpec(shape=(128, 128, 3),
                                                            dtype=tf.uint8,
@@ -132,25 +139,26 @@ class GraspingPreprocessor(abstract_preprocessor.AbstractPreprocessor):
         spec['imgs/RGB'] = utils.ExtendedTensorSpec(shape=(128, 128, 3),
                                                     dtype=tf.float32,
                                                     name='rgb')
-        spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(shape=(128, 128,
-                                                                   3),
-                                                            dtype=tf.float32,
-                                                            name='feature_rgb',
-                                                            data_format='jpeg')
+        if self.include_action_imgs:
+            spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(
+                shape=(128, 128, 3),
+                dtype=tf.float32,
+                name='feature_rgb',
+                data_format='jpeg')
         spec['imgs/Depth'] = utils.ExtendedTensorSpec(shape=(128, 128, 1),
                                                       dtype=tf.float32,
                                                       name='depth')
-        spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
-            shape=(128, 128, 3), dtype=tf.float32, name='feature_depth')
+        if self.include_action_imgs:
+            spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
+                shape=(128, 128, 3), dtype=tf.float32, name='feature_depth')
         if self.include_target_img:
             spec['imgs/Target'] = utils.ExtendedTensorSpec(shape=(128, 128, 3),
                                                            dtype=tf.float32,
                                                            name='target',
                                                            data_format='jpeg')
         if self.include_height_map:
-            spec['imgs/Height_Map'] = utils.ExtendedTensorSpec(shape=(128, 128, 1),
-                                                          dtype=tf.float32,
-                                                          name='depth')
+            spec['imgs/Height_Map'] = utils.ExtendedTensorSpec(
+                shape=(128, 128, 1), dtype=tf.float32, name='depth')
         return spec
 
     def get_out_label_specification(self, mode: str) -> utils.TensorSpecStruct:
@@ -172,7 +180,8 @@ class GraspingModel(abstract_model.AbstractT2RModel):
     def __init__(self,
                  embedding_loss_fn: Callable = tf.compat.v1.losses.log_loss,
                  include_target_img: bool = True,
-                 include_height_map: bool = True):
+                 include_height_map: bool = True,
+                 include_action_imgs: bool = True):
         """Creates a t2r GrapsingModel.
 
         Args:
@@ -183,6 +192,7 @@ class GraspingModel(abstract_model.AbstractT2RModel):
         self._embedding_loss_fn = embedding_loss_fn
         self.include_target_img = include_target_img
         self.include_height_map = include_height_map
+        self.include_action_imgs = include_action_imgs
 
     def get_feature_specification(self, mode: str) -> utils.TensorSpecStruct:
         """The specification for the features for the model.
@@ -197,25 +207,26 @@ class GraspingModel(abstract_model.AbstractT2RModel):
         spec['imgs/RGB'] = utils.ExtendedTensorSpec(shape=(128, 128, 3),
                                                     dtype=tf.float32,
                                                     name='rgb')
-        spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(shape=(128, 128,
-                                                                   3),
-                                                            dtype=tf.float32,
-                                                            name='feature_rgb',
-                                                            data_format='jpeg')
+        if self.include_action_imgs:
+            spec['imgs/Feature_RGB'] = utils.ExtendedTensorSpec(
+                shape=(128, 128, 3),
+                dtype=tf.float32,
+                name='feature_rgb',
+                data_format='jpeg')
         spec['imgs/Depth'] = utils.ExtendedTensorSpec(shape=(128, 128, 1),
                                                       dtype=tf.float32,
                                                       name='depth')
-        spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
-            shape=(128, 128, 3), dtype=tf.float32, name='feature_depth')
+        if self.include_action_imgs:
+            spec['imgs/Feature_Depth'] = utils.ExtendedTensorSpec(
+                shape=(128, 128, 3), dtype=tf.float32, name='feature_depth')
         if self.include_target_img:
             spec['imgs/Target'] = utils.ExtendedTensorSpec(shape=(128, 128, 3),
                                                            dtype=tf.float32,
                                                            name='target',
                                                            data_format='jpeg')
         if self.include_height_map:
-            spec['imgs/Height_Map'] = utils.ExtendedTensorSpec(shape=(128, 128, 1),
-                                                               dtype=tf.float32,
-                                                               name='depth')
+            spec['imgs/Height_Map'] = utils.ExtendedTensorSpec(
+                shape=(128, 128, 1), dtype=tf.float32, name='depth')
         return spec
 
     def get_label_specification(self, mode: str) -> utils.TensorSpecStruct:
@@ -278,7 +289,8 @@ class GraspingModel(abstract_model.AbstractT2RModel):
 
         is_training = mode == tf.estimator.ModeKeys.TRAIN
 
-        output = model(features.imgs, is_training, self.include_target_img, self.include_height_map)
+        output = model(features.imgs, is_training, self.include_target_img,
+                       self.include_height_map, self.include_action_imgs)
 
         return {'grasp_success': output}
 
@@ -378,11 +390,13 @@ class GraspingModel(abstract_model.AbstractT2RModel):
         tf.summary.scalar('accuracy', acc)
 
         tf.summary.image('RGB', features['imgs/RGB'], max_outputs=8)
-        tf.summary.image('Feature_RGB',
-                         features['imgs/Feature_RGB'],
-                         max_outputs=8)
+        if self.include_action_imgs:
+            tf.summary.image('Feature_RGB',
+                             features['imgs/Feature_RGB'],
+                             max_outputs=8)
         tf.summary.image('Depth', features['imgs/Depth'])
-        tf.summary.image('Feature_Depth', features['imgs/Feature_Depth'])
+        if self.include_action_imgs:
+            tf.summary.image('Feature_Depth', features['imgs/Feature_Depth'])
         if self.include_target_img:
             tf.summary.image('Target', features['imgs/Target'])
         if self.include_height_map:

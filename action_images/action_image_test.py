@@ -100,7 +100,7 @@ class ActionImageTest(tf.test.TestCase):
 
         data = [[rgbd, points[0], points[1], points[2], points[3], success]]
 
-        imgs, lbls = action.create_dataset(cipm, data)
+        imgs, lbls = action.create_dataset(cipm, data, True)
 
         imgs = imgs[0]
 
@@ -130,7 +130,7 @@ class ActionImageTest(tf.test.TestCase):
 
         data = [[rgbd, points[0], points[1], points[2], None, success]]
 
-        imgs, lbls = action.create_dataset(cipm, data)
+        imgs, lbls = action.create_dataset(cipm, data, True)
 
         imgs = imgs[0]
 
@@ -148,13 +148,36 @@ class ActionImageTest(tf.test.TestCase):
             imgs[3],
             np.load(
                 'action_images/test_files/generic_example/feature_depth.npy'))
+        self.assertAllEqual(imgs[4], None)
+
+    def test_create_dataset_with_target(self):
+        """tests that action images are correctly created."""
+        rgbd = np.load('action_images/test_files/rgbd.npy')
+        points = np.load('action_images/test_files/points.npy')
+        success = np.load('action_images/test_files/success.npy')
+
+        data = [[rgbd, points[0], points[1], points[2], points[3], success]]
+
+        imgs, lbls = action.create_dataset(cipm, data, False)
+
+        imgs = imgs[0]
+
+        self.assertAllEqual(
+            imgs[0],
+            np.load('action_images/test_files/generic_example/rgb.npy'))
+        self.assertAllEqual(imgs[1], None)
+        self.assertAllEqual(
+            imgs[2],
+            np.load('action_images/test_files/generic_example/depth.npy'))
+        self.assertAllEqual(imgs[3], None)
         self.assertAllEqual(
             imgs[4],
-            None)
+            np.load('action_images/test_files/generic_example/target.npy'))
 
     def test_get_data_with_balance(self):
         """tests that get_data balances the positive and negative examples"""
-        data = action.get_data(True, True, False, './action_images/test_files/example_data')
+        data = action.get_data(True, True, False,
+                               './action_images/test_files/example_data')
         pos = 0
         neg = 0
 

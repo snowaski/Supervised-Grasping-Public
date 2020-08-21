@@ -201,7 +201,10 @@ def create_photometric_distortion_no_noise(rgb: np.ndarray) -> np.ndarray:
     return image[0] * 256
 
 
-def get_data(target: bool, balance: bool, height_map: bool, data_dir: str = 'data/') -> list:
+def get_data(target: bool,
+             balance: bool,
+             height_map: bool,
+             data_dir: str = 'data/') -> list:
     """Extracts the data from data_dir using data.csv.
 
     Args:
@@ -229,8 +232,9 @@ def get_data(target: bool, balance: bool, height_map: bool, data_dir: str = 'dat
         balance_examples = 0
 
         for i, id in enumerate(csv['scenario_id']):
-            success = csv['grasp_success'][i] and not csv['pieces_knocked_over'][i]
-            if balance and balance_examples >= example_limit and success != bal :
+            success = csv['grasp_success'][
+                i] and not csv['pieces_knocked_over'][i]
+            if balance and balance_examples >= example_limit and success != bal:
                 continue
             entry = []
             try:
@@ -262,13 +266,15 @@ def get_data(target: bool, balance: bool, height_map: bool, data_dir: str = 'dat
     return data
 
 
-def create_dataset(cipm: np.ndarray, data: list) -> Tuple[list, np.ndarray]:
+def create_dataset(cipm: np.ndarray, data: list,
+                   action: bool) -> Tuple[list, np.ndarray]:
     '''transforms the data into action images, with rgb, depth, feature_rgb,
     feature_depth, and target images.
 
     Args:
         cipm: the camera intrinsic projection matrix.
         data: a list containg list with rgbd data, 3D points, and the success of the entry.
+        action: whether or not to create feature action images.
 
     Returns:
         a Tuple[list, np.ndarray] with the action images and their labels.
@@ -282,27 +288,36 @@ def create_dataset(cipm: np.ndarray, data: list) -> Tuple[list, np.ndarray]:
             [feature_left_finger, feature_right_finger, feature_wrist])
         points = project_points_to_image_space(points, cipm)
 
-        # draw action images
-        feature_rgb = draw_feature_img(points, [255] * 3)
-        norms = [
-            np.linalg.norm(feature_left_finger),
-            np.linalg.norm(feature_right_finger),
-            np.linalg.norm(feature_wrist)
-        ]
-        feature_depth = draw_feature_img(points, norms)
+        center = np.squeeze(points)
+        center = np.sum(center, axis=0) / 3
+        center = center.astype(np.int32)
 
+        # draw action images
+        feature_rgb = None
+        feature_depth = None
+        if action:
+            feature_rgb = draw_feature_img(points, [255] * 3)
+            norms = [
+                np.linalg.norm(feature_left_finger),
+                np.linalg.norm(feature_right_finger),
+                np.linalg.norm(feature_wrist)
+            ]
+            feature_depth = draw_feature_img(points, norms)
+            feature_rgb = crop_to_target(center, feature_rgb,
+                                         CROPPED_IMAGE_SIZE)
+            feature_depth = crop_to_target(center, feature_depth,
+                                           CROPPED_IMAGE_SIZE)
+
+        target_img = None
         # create target image
         if target is not None:
             target_points = project_points_to_image_space(
                 np.array([target]), cipm)
             target_img = crop_to_target(target_points[0, 0], rgbd[:, :, :3],
                                         CROPPED_IMAGE_SIZE)
-        else:
-            target_img = None
 
         # crop images
-        feature_rgb, feature_depth, rgbd = crop_imgs(points, feature_rgb,
-                                                     feature_depth, rgbd)
+        rgbd = crop_to_target(center, rgbd, CROPPED_IMAGE_SIZE)
 
         depth = tf.expand_dims(rgbd[:, :, 3], axis=2)
         rgb = rgbd[:, :, :3]
@@ -348,23 +363,27 @@ def serialize(imgs: list, lbl: int) -> tf.train.Example:
     if target is not None:
         target = tf.cast(target, tf.uint8)
         encoded_target = tf.io.encode_jpeg(target)
-    feature_rgb = tf.cast(feature_rgb, tf.uint8)
-    encoded_feature_rgb = tf.io.encode_jpeg(feature_rgb)
+    if feature_rgb is not None:
+        feature_rgb = tf.cast(feature_rgb, tf.uint8)
+        encoded_feature_rgb = tf.io.encode_jpeg(feature_rgb)
     depth = tf.cast(depth, tf.float32)
     encoded_depth = tf.io.serialize_tensor(depth)
-    feature_depth = tf.cast(feature_depth, tf.float32)
-    encoded_feature_depth = tf.io.serialize_tensor(feature_depth)
+    if feature_depth is not None:
+        feature_depth = tf.cast(feature_depth, tf.float32)
+        encoded_feature_depth = tf.io.serialize_tensor(feature_depth)
 
     feature = {
         'rgb': _bytes_feature(encoded_rgb),
-        'feature_rgb': _bytes_feature(encoded_feature_rgb),
         'depth': _bytes_feature(encoded_depth),
-        'feature_depth': _bytes_feature(encoded_feature_depth),
         'grasp_success': _int64_feature(lbl)
     }
 
     if target is not None:
-        feature['target'] = _bytes_feature(encoded_target),
+        feature['target'] = _bytes_feature(encoded_target)
+    if feature_rgb is not None:
+        feature['feature_rgb'] = _bytes_feature(encoded_feature_rgb)
+    if feature_depth is not None:
+        feature['feature_depth'] = _bytes_feature(encoded_feature_depth)
 
     return tf.train.Example(features=tf.train.Features(feature=feature))
 
@@ -406,7 +425,12 @@ if __name__ == '__main__':
     parser.add_argument(
         "--height-map",
         action='store_true',
-        help='determines whether to include a top down height map of the piece.')
+        help='determines whether to include a top down height map of the piece.'
+    )
+    parser.add_argument(
+        "--no-action",
+        action='store_true',
+        help='determines whether to create feature action images.')
     args = parser.parse_args()
 
     tf.enable_eager_execution()
@@ -416,7 +440,7 @@ if __name__ == '__main__':
                      [0, 0, 1]])
 
     data = get_data(args.target, args.balance, args.height_map, args.data_dir)
-    imgs, labels = create_dataset(cipm, data)
+    imgs, labels = create_dataset(cipm, data, args.no_action)
     print(len(imgs))
 
     X_train, X_test, y_train, y_test = train_test_split(imgs,

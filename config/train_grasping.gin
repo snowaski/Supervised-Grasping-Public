@@ -22,6 +22,7 @@ eval_input_generator/DefaultRecordInputGenerator.batch_size = %EVAL_BATCH_SIZE
 
 INCLUDE_TARGET = False
 INCLUDE_HEIGHT_MAP = False
+INCLUDE_ACTION_IMGS = False
 
 #######################################
 # MODEL
@@ -32,11 +33,14 @@ train_eval_model.model_dir="./latest_model"
 
 create_adam_optimizer.learning_rate_fn = @cosine_decay_with_warmup
 
-GraspingModel.include_target_img = INCLUDE_TARGET
-GraspingPreprocessor.include_target_img = INCLUDE_TARGET
+GraspingModel.include_target_img = %INCLUDE_TARGET
+GraspingPreprocessor.include_target_img = %INCLUDE_TARGET
 
-GraspingModel.include_target_img = INCLUDE_HEIGHT_MAP
-GraspingPreprocessor.include_target_img = INCLUDE_HEIGHT_MAP
+GraspingModel.include_target_img = %INCLUDE_HEIGHT_MAP
+GraspingPreprocessor.include_target_img = %INCLUDE_HEIGHT_MAP
+
+GraspingModel.include_action_imgs = %INCLUDE_ACTION_IMGS
+GraspingPreprocessor.include_action_imgs = %INCLUDE_ACTION_IMGS
 
 #####################################
 # TRAINING
