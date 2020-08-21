@@ -560,7 +560,7 @@ class Model(object):
             training the classifier.
           include_target_img: Whether or not the model has a target image tower.
           include_height_map: Whether or not the model has a height map tower.
-          include_aciton_imgs: Whether or not the model has feature action image towers.
+          include_action_imgs: Whether or not the model has feature action image towers.
           film_generator_fn: Callable that takes in a list of lists.
           film_generator_input: Tensor to be passed into film_generator_fn.
 

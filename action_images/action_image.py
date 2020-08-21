@@ -17,7 +17,7 @@ CROPPED_IMAGE_SIZE = (128, 128)
 
 def crop_to_target(center: np.ndarray, img: np.ndarray,
                    dims: Tuple[int, int]) -> tf.image:
-    """Crops the input image according to the dimensions.
+    """Crops the input image around a center point.
 
     Args:
         center: an array representing the center position.
@@ -81,7 +81,7 @@ def _int64_feature(value: tf.Tensor) -> tf.train.Feature:
 
 def project_points_to_image_space(points: np.ndarray,
                                   cipm: np.ndarray) -> np.ndarray:
-    """Projects the points from 3D camera frame to a 2D image frame.
+    """Projects the points from 3D camera frame to a 2D images.
 
     Args:
         points: the array of points to project.
@@ -123,7 +123,7 @@ def draw_point(radius: int, x: int, y: int, value: int) -> np.ndarray:
 
 
 def draw_feature_img(points: np.ndarray, value: list) -> np.ndarray:
-    """Creates a feature image by drawing a point at point with a specific value.
+    """Creates a feature image by drawing a point at the feature points with a specific value.
 
     Args:
         points: an array of points.
@@ -141,7 +141,7 @@ def draw_feature_img(points: np.ndarray, value: list) -> np.ndarray:
 
 
 def create_photometric_distortion_with_noise(rgb: np.ndarray) -> np.ndarray:
-    """Creates a new image based on rgbd with photomoetric distortion, 
+    """Creates a new image based on rgbd with photomoetric distortion,
     including gaussian noise.
 
     Args:
@@ -161,8 +161,8 @@ def create_photometric_distortion_with_noise(rgb: np.ndarray) -> np.ndarray:
 
 
 def create_photometric_distortion_no_noise(rgb: np.ndarray) -> np.ndarray:
-    """Creates a new image based on rgbd with photomoetric distortion, 
-    including gaussian noise.
+    """Creates a new image based on rgbd with photomoetric distortion,
+    without gaussian noise.
 
     Args:
         rgb: the image to transform.
@@ -209,6 +209,7 @@ def get_data(target: bool,
         for i, id in enumerate(csv['scenario_id']):
             success = csv['grasp_success'][
                 i] and not csv['pieces_knocked_over'][i]
+
             if balance and balance_examples >= example_limit and success != bal:
                 continue
             entry = []
@@ -263,9 +264,7 @@ def create_dataset(cipm: np.ndarray, data: list,
             [feature_left_finger, feature_right_finger, feature_wrist])
         points = project_points_to_image_space(points, cipm)
 
-        center = np.squeeze(points)
-        center = np.sum(center, axis=0) / 3
-        center = center.astype(np.int32)
+        center = np.sum(np.squeeze(points), axis=0, dtype=np.int32) // 3
 
         # draw action images
         feature_rgb = None
@@ -283,8 +282,8 @@ def create_dataset(cipm: np.ndarray, data: list,
             feature_depth = crop_to_target(center, feature_depth,
                                            CROPPED_IMAGE_SIZE)
 
-        target_img = None
         # create target image
+        target_img = None
         if target is not None:
             target_points = project_points_to_image_space(
                 np.array([target]), cipm)
@@ -372,6 +371,8 @@ def write_imgs(X_train: np.ndarray, X_test: np.ndarray, y_train: np.ndarray,
         X_test: an array with the testing data
         y_train: the training labels
         y_test: the testing labels
+        train_file: the directory to save the training data to.
+        test_file: the directory to save the testing data to.
     """
     with tf.io.TFRecordWriter(train_file) as writer:
         for img, lbl in zip(X_train, y_train):

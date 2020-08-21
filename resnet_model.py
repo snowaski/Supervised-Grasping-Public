@@ -18,6 +18,24 @@ class GraspingPreprocessor(abstract_preprocessor.AbstractPreprocessor):
                  include_target_img: bool = True,
                  include_height_map: bool = True,
                  include_action_imgs: bool = True):
+        """initializes the grasping preprocessor
+
+         Args:
+            model_feature_specification_fn: (Optional) A function which takes mode as
+                an argument and returns a valid spec structure for the features,
+                preferablely a (hierarchical) namedtuple of TensorSpecs and
+                OptionalTensorSpecs.
+            model_label_specification_fn: (Optional) A function which takes mode as an
+                argument and returns a valid spec structure for the labels, preferably a
+                (hierarchical) namedtupel of TensorSpecs and OptionalTensorSpecs.
+            is_model_device_tpu: True if the model is operating on TPU and otherwise
+                False. This information is useful to do type conversions and strip
+                unnecessary information from preprocessing since no summaries are
+                generated on TPUs.
+            include_target_img: Whether or not to include a target image in the model.
+            include_height_map: Whether or not to include a height map in the model.
+            include_action_imgs: Whether or not to include a feature action images in the model.
+        """
         super(GraspingPreprocessor,
               self).__init__(model_feature_specification_fn,
                              model_label_specification_fn, is_model_device_tpu)
@@ -187,6 +205,8 @@ class GraspingModel(abstract_model.AbstractT2RModel):
         Args:
             embedding_loss_fn: the loss function used in the model. By default, log loss.
             include_target_img: Whether or not to include a target image in the model.
+            include_height_map: Whether or not to include a height map in the model.
+            include_action_imgs: Whether or not to include a feature action images in the model.
         """
         super(GraspingModel, self).__init__()
         self._embedding_loss_fn = embedding_loss_fn
