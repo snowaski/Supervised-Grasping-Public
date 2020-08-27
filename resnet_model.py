@@ -8,8 +8,6 @@ from tensor2robot.layers import resnet
 from tensor2robot.preprocessors import image_transformations, abstract_preprocessor
 from typing import List, Tuple, Optional, Union, Callable
 
-
-@gin.configurable
 class GraspingPreprocessor(abstract_preprocessor.AbstractPreprocessor):
     def __init__(self,
                  model_feature_specification_fn: Callable = None,

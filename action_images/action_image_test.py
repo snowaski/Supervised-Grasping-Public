@@ -100,7 +100,7 @@ class ActionImageTest(tf.test.TestCase):
 
         data = [[rgbd, points[0], points[1], points[2], points[3], success]]
 
-        imgs, lbls = action.create_dataset(cipm, data, True)
+        imgs, lbls = action.create_dataset(cipm, data, True, False)
 
         imgs = imgs[0]
 
@@ -114,6 +114,36 @@ class ActionImageTest(tf.test.TestCase):
         self.assertAllEqual(
             imgs[2],
             np.load('action_images/test_files/generic_example/depth.npy'))
+        self.assertAllEqual(
+            imgs[3],
+            np.load(
+                'action_images/test_files/generic_example/feature_depth.npy'))
+        self.assertAllEqual(
+            imgs[4],
+            np.load('action_images/test_files/generic_example/target.npy'))
+        
+    def test_create_dataset_isolate_depth(self):
+        """tests that action images are correctly created."""
+        rgbd = np.load('action_images/test_files/rgbd.npy')
+        points = np.load('action_images/test_files/points.npy')
+        success = np.load('action_images/test_files/success.npy')
+
+        data = [[rgbd, points[0], points[1], points[2], points[3], success]]
+
+        imgs, lbls = action.create_dataset(cipm, data, True)
+
+        imgs = imgs[0]
+
+        self.assertAllEqual(
+            imgs[0],
+            np.load('action_images/test_files/generic_example/rgb.npy'))
+        self.assertAllEqual(
+            imgs[1],
+            np.load(
+                'action_images/test_files/generic_example/feature_rgb.npy'))
+        self.assertAllEqual(
+            imgs[2],
+            np.load('action_images/test_files/generic_example/isolate-depth.npy'))
         self.assertAllEqual(
             imgs[3],
             np.load(
@@ -174,6 +204,7 @@ class ActionImageTest(tf.test.TestCase):
             imgs[4],
             np.load('action_images/test_files/generic_example/target.npy'))
 
+
     def test_get_data_with_balance(self):
         """tests that get_data balances the positive and negative examples"""
         data = action.get_data(True, True, False,
@@ -188,7 +219,6 @@ class ActionImageTest(tf.test.TestCase):
                 neg += 1
 
         self.assertEqual(pos, neg)
-
 
 if __name__ == '__main__':
     tf.enable_eager_execution()

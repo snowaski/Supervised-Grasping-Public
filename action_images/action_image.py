@@ -10,8 +10,6 @@ from sklearn.model_selection import train_test_split
 from tensor2robot.preprocessors import image_transformations
 from typing import List, Tuple, Optional
 
-from matplotlib import pyplot as plt
-
 CROPPED_IMAGE_SIZE = (128, 128)
 
 
@@ -242,14 +240,16 @@ def get_data(target: bool,
     return data
 
 
+
 def create_dataset(cipm: np.ndarray, data: list,
-                   action: bool) -> Tuple[list, np.ndarray]:
+                   action: bool, isolate_depth: bool) -> Tuple[list, np.ndarray]:
     '''transforms the data into action images, with rgb, depth, feature_rgb,
     feature_depth, and target images.
 
     Args:
         cipm: the camera intrinsic projection matrix.
         data: a list containg list with rgbd data, 3D points, and the success of the entry.
+        isolate_depth: whether to isolate the chess pieces from the depth image.
         action: whether or not to create feature action images.
 
     Returns:
@@ -295,6 +295,13 @@ def create_dataset(cipm: np.ndarray, data: list,
 
         depth = tf.expand_dims(rgbd[:, :, 3], axis=2)
         rgb = rgbd[:, :, :3]
+        
+        if isolate_depth:
+            depth = depth.numpy()
+            for c in range(127, 0, -1):
+                for r in range(127, 0, -1):
+                    if depth[r, c, 0] <= depth[r-1, c, 0]:
+                        depth[r, c, 0] = 0
 
         imgs.append([rgb, feature_rgb, depth, feature_depth, target_img])
         labels.append(success)
@@ -395,6 +402,13 @@ if __name__ == '__main__':
         "--balance",
         action='store_true',
         help='determines whether to balance positive and negative examples.')
+    parser.add_argument(
+        "--isolate-depth",
+        action='store_true',
+        help='determines whether to isolate chess pieces from depth image.')
+    parser.add_argument("--data-dir",
+                        default="data/",
+                        help='the directory to find data.')
     parser.add_argument("--data-dir",
                         default="data/",
                         help='the directory to find data.')
@@ -415,8 +429,9 @@ if __name__ == '__main__':
                      [0, 739.22373806060455 / 2, 512.44139003753662 / 2],
                      [0, 0, 1]])
 
+
     data = get_data(args.target, args.balance, args.height_map, args.data_dir)
-    imgs, labels = create_dataset(cipm, data, args.no_action)
+    imgs, labels = create_dataset(cipm, data, args.no_action, args.isolate_depth)
     print(len(imgs))
 
     X_train, X_test, y_train, y_test = train_test_split(imgs,
