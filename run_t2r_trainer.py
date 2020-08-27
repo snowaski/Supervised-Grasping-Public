@@ -22,15 +22,14 @@ import gin
 from tensor2robot.utils import train_eval
 import tensorflow.compat.v1 as tf
 
-
 FLAGS = flags.FLAGS
 
 
 def main(unused_argv):
-  gin.parse_config_files_and_bindings(FLAGS.gin_configs, FLAGS.gin_bindings)
-  train_eval.train_eval_model()
+    gin.parse_config_files_and_bindings(FLAGS.gin_configs, FLAGS.gin_bindings)
+    train_eval.train_eval_model()
 
 
 if __name__ == '__main__':
-  tf.logging.set_verbosity(tf.logging.INFO)
-  app.run(main)
+    tf.logging.set_verbosity(tf.logging.INFO)
+    app.run(main)

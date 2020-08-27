@@ -15,7 +15,7 @@ CROPPED_IMAGE_SIZE = (128, 128)
 
 def crop_to_target(center: np.ndarray, img: np.ndarray,
                    dims: Tuple[int, int]) -> tf.image:
-    """Crops the input image according to the dimensions.
+    """Crops the input image around a center point.
 
     Args:
         center: an array representing the center position.
@@ -79,7 +79,7 @@ def _int64_feature(value: tf.Tensor) -> tf.train.Feature:
 
 def project_points_to_image_space(points: np.ndarray,
                                   cipm: np.ndarray) -> np.ndarray:
-    """Projects the points from 3D camera frame to a 2D image frame.
+    """Projects the points from 3D camera frame to a 2D images.
 
     Args:
         points: the array of points to project.
@@ -121,7 +121,7 @@ def draw_point(radius: int, x: int, y: int, value: int) -> np.ndarray:
 
 
 def draw_feature_img(points: np.ndarray, value: list) -> np.ndarray:
-    """Creates a feature image by drawing a point at point with a specific value.
+    """Creates a feature image by drawing a point at the feature points with a specific value.
 
     Args:
         points: an array of points.
@@ -138,33 +138,8 @@ def draw_feature_img(points: np.ndarray, value: list) -> np.ndarray:
     return np.concatenate(img, axis=2)
 
 
-def crop_imgs(points: np.ndarray, feature_rgb: np.ndarray,
-              feature_depth: np.ndarray,
-              rgbd: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Crops the action images around point and target point.
-
-    Args:
-        points: the grasp candidate points to crop around.
-        feature_rgb: the feature rgb image.
-        feature_depth: the feature_depth image.
-        rgbd: the rgbd image.
-
-    Returns:
-        a tuple of cropped np array images.
-    """
-    points = np.squeeze(points)
-    points = np.sum(points, axis=0) / 3
-    points = points.astype(np.int32)
-
-    feature_rgb = crop_to_target(points, feature_rgb, CROPPED_IMAGE_SIZE)
-    feature_depth = crop_to_target(points, feature_depth, CROPPED_IMAGE_SIZE)
-    rgbd = crop_to_target(points, rgbd, CROPPED_IMAGE_SIZE)
-
-    return feature_rgb, feature_depth, rgbd
-
-
 def create_photometric_distortion_with_noise(rgb: np.ndarray) -> np.ndarray:
-    """Creates a new image based on rgbd with photomoetric distortion, 
+    """Creates a new image based on rgbd with photomoetric distortion,
     including gaussian noise.
 
     Args:
@@ -184,8 +159,8 @@ def create_photometric_distortion_with_noise(rgb: np.ndarray) -> np.ndarray:
 
 
 def create_photometric_distortion_no_noise(rgb: np.ndarray) -> np.ndarray:
-    """Creates a new image based on rgbd with photomoetric distortion, 
-    including gaussian noise.
+    """Creates a new image based on rgbd with photomoetric distortion,
+    without gaussian noise.
 
     Args:
         rgb: the image to transform.
@@ -199,12 +174,16 @@ def create_photometric_distortion_no_noise(rgb: np.ndarray) -> np.ndarray:
     return image[0] * 256
 
 
-def get_data(target: bool, balance: bool, data_dir: str = 'data/') -> list:
+def get_data(target: bool,
+             balance: bool,
+             height_map: bool,
+             data_dir: str = 'data/') -> list:
     """Extracts the data from data_dir using data.csv.
 
     Args:
         target: determines whether to include a target image or not.
         balance: determines whether or not to balance the negative and positive examples.
+        height_map: determines whether to include a height map image.
         data_dir: the directory path where the data is.
 
     Returns:
@@ -222,17 +201,20 @@ def get_data(target: bool, balance: bool, data_dir: str = 'data/') -> list:
         bal = not (csv['grasp_success'].value_counts()[True] >
                    csv['grasp_success'].value_counts()[False])
         example_limit = csv['grasp_success'].value_counts()[bal]
+
         balance_examples = 0
 
         for i, id in enumerate(csv['scenario_id']):
-            if balance and csv['grasp_success'][
-                    i] != bal and balance_examples >= example_limit:
+            success = csv['grasp_success'][
+                i] and not csv['pieces_knocked_over'][i]
+
+            if balance and balance_examples >= example_limit and success != bal:
                 continue
             entry = []
             try:
                 entry.append(
                     np.load(f'{data_dir}/{d}/{id}/rgbd.data')['arr_0'])
-            except:
+            except FileNotFoundError:
                 continue
 
             entry.append(
@@ -248,9 +230,7 @@ def get_data(target: bool, balance: bool, data_dir: str = 'data/') -> list:
             else:
                 entry.append(None)
 
-            # determine success
-            entry.append(csv['grasp_success'][i]
-                         and not csv['pieces_knocked_over'][i])
+            entry.append(success)
 
             if entry[-1] != bal:
                 balance_examples += 1
@@ -260,7 +240,9 @@ def get_data(target: bool, balance: bool, data_dir: str = 'data/') -> list:
     return data
 
 
-def create_dataset(cipm: np.ndarray, data: list, isolate_depth: bool) -> Tuple[list, np.ndarray]:
+
+def create_dataset(cipm: np.ndarray, data: list,
+                   action: bool, isolate_depth: bool) -> Tuple[list, np.ndarray]:
     '''transforms the data into action images, with rgb, depth, feature_rgb,
     feature_depth, and target images.
 
@@ -268,6 +250,7 @@ def create_dataset(cipm: np.ndarray, data: list, isolate_depth: bool) -> Tuple[l
         cipm: the camera intrinsic projection matrix.
         data: a list containg list with rgbd data, 3D points, and the success of the entry.
         isolate_depth: whether to isolate the chess pieces from the depth image.
+        action: whether or not to create feature action images.
 
     Returns:
         a Tuple[list, np.ndarray] with the action images and their labels.
@@ -281,27 +264,34 @@ def create_dataset(cipm: np.ndarray, data: list, isolate_depth: bool) -> Tuple[l
             [feature_left_finger, feature_right_finger, feature_wrist])
         points = project_points_to_image_space(points, cipm)
 
+        center = np.sum(np.squeeze(points), axis=0, dtype=np.int32) // 3
+
         # draw action images
-        feature_rgb = draw_feature_img(points, [255] * 3)
-        norms = [
-            np.linalg.norm(feature_left_finger),
-            np.linalg.norm(feature_right_finger),
-            np.linalg.norm(feature_wrist)
-        ]
-        feature_depth = draw_feature_img(points, norms)
+        feature_rgb = None
+        feature_depth = None
+        if action:
+            feature_rgb = draw_feature_img(points, [255] * 3)
+            norms = [
+                np.linalg.norm(feature_left_finger),
+                np.linalg.norm(feature_right_finger),
+                np.linalg.norm(feature_wrist)
+            ]
+            feature_depth = draw_feature_img(points, norms)
+            feature_rgb = crop_to_target(center, feature_rgb,
+                                         CROPPED_IMAGE_SIZE)
+            feature_depth = crop_to_target(center, feature_depth,
+                                           CROPPED_IMAGE_SIZE)
 
         # create target image
+        target_img = None
         if target is not None:
             target_points = project_points_to_image_space(
                 np.array([target]), cipm)
             target_img = crop_to_target(target_points[0, 0], rgbd[:, :, :3],
                                         CROPPED_IMAGE_SIZE)
-        else:
-            target_img = None
 
         # crop images
-        feature_rgb, feature_depth, rgbd = crop_imgs(points, feature_rgb,
-                                                     feature_depth, rgbd)
+        rgbd = crop_to_target(center, rgbd, CROPPED_IMAGE_SIZE)
 
         depth = tf.expand_dims(rgbd[:, :, 3], axis=2)
         rgb = rgbd[:, :, :3]
@@ -354,23 +344,27 @@ def serialize(imgs: list, lbl: int) -> tf.train.Example:
     if target is not None:
         target = tf.cast(target, tf.uint8)
         encoded_target = tf.io.encode_jpeg(target)
-    feature_rgb = tf.cast(feature_rgb, tf.uint8)
-    encoded_feature_rgb = tf.io.encode_jpeg(feature_rgb)
+    if feature_rgb is not None:
+        feature_rgb = tf.cast(feature_rgb, tf.uint8)
+        encoded_feature_rgb = tf.io.encode_jpeg(feature_rgb)
     depth = tf.cast(depth, tf.float32)
     encoded_depth = tf.io.serialize_tensor(depth)
-    feature_depth = tf.cast(feature_depth, tf.float32)
-    encoded_feature_depth = tf.io.serialize_tensor(feature_depth)
+    if feature_depth is not None:
+        feature_depth = tf.cast(feature_depth, tf.float32)
+        encoded_feature_depth = tf.io.serialize_tensor(feature_depth)
 
     feature = {
         'rgb': _bytes_feature(encoded_rgb),
-        'feature_rgb': _bytes_feature(encoded_feature_rgb),
         'depth': _bytes_feature(encoded_depth),
-        'feature_depth': _bytes_feature(encoded_feature_depth),
         'grasp_success': _int64_feature(lbl)
     }
 
     if target is not None:
-        feature['target'] = _bytes_feature(encoded_target),
+        feature['target'] = _bytes_feature(encoded_target)
+    if feature_rgb is not None:
+        feature['feature_rgb'] = _bytes_feature(encoded_feature_rgb)
+    if feature_depth is not None:
+        feature['feature_depth'] = _bytes_feature(encoded_feature_depth)
 
     return tf.train.Example(features=tf.train.Features(feature=feature))
 
@@ -384,6 +378,8 @@ def write_imgs(X_train: np.ndarray, X_test: np.ndarray, y_train: np.ndarray,
         X_test: an array with the testing data
         y_train: the training labels
         y_test: the testing labels
+        train_file: the directory to save the training data to.
+        test_file: the directory to save the testing data to.
     """
     with tf.io.TFRecordWriter(train_file) as writer:
         for img, lbl in zip(X_train, y_train):
@@ -413,6 +409,18 @@ if __name__ == '__main__':
     parser.add_argument("--data-dir",
                         default="data/",
                         help='the directory to find data.')
+    parser.add_argument("--data-dir",
+                        default="data/",
+                        help='the directory to find data.')
+    parser.add_argument(
+        "--height-map",
+        action='store_true',
+        help='determines whether to include a top down height map of the piece.'
+    )
+    parser.add_argument(
+        "--no-action",
+        action='store_true',
+        help='determines whether to create feature action images.')
     args = parser.parse_args()
 
     tf.enable_eager_execution()
@@ -421,8 +429,9 @@ if __name__ == '__main__':
                      [0, 739.22373806060455 / 2, 512.44139003753662 / 2],
                      [0, 0, 1]])
 
-    data = get_data(args.target, args.balance, args.data_dir)
-    imgs, labels = create_dataset(cipm, data, args.isolate_depth)
+
+    data = get_data(args.target, args.balance, args.height_map, args.data_dir)
+    imgs, labels = create_dataset(cipm, data, args.no_action, args.isolate_depth)
     print(len(imgs))
 
     X_train, X_test, y_train, y_test = train_test_split(imgs,

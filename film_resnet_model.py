@@ -381,9 +381,6 @@ def _block_layer(inputs: utils.TensorSpecStruct, filters: int,
     Returns:
       The output tensor of the block layer.
     """
-    # if blocks != len(film_gamma_betas):
-    #   raise ValueError('film_gamma_betas has length {}, expected {}'.format(
-    #       len(film_gamma_betas), blocks))
 
     # Bottleneck blocks end with 4x the number of filters as they start with
     filters_out = filters * 4 if bottleneck else filters
@@ -552,6 +549,8 @@ class Model(object):
                  inputs: utils.TensorSpecStruct,
                  training: bool,
                  include_target_img: bool,
+                 include_height_map: bool,
+                 include_action_imgs: bool,
                  film_generator_fn: Optional[Callable] = None,
                  film_generator_input: Optional[Callable] = None) -> tf.Tensor:
         """Add operations to classify a batch of input images.
@@ -560,27 +559,38 @@ class Model(object):
           training: A boolean. Set to True to add operations required only when
             training the classifier.
           include_target_img: Whether or not the model has a target image tower.
+          include_height_map: Whether or not the model has a height map tower.
+          include_action_imgs: Whether or not the model has feature action image towers.
           film_generator_fn: Callable that takes in a list of lists.
           film_generator_input: Tensor to be passed into film_generator_fn.
 
         Returns:
           A logits Tensor with shape [<batch_size>, self.num_classes].
         """
-        filters = [4, 8, [256, 32, 32], 8]
+        # assert(False), f'{inputs} {include_action_imgs}'
+        filters = [4, [256, 32, 32]]
         if include_target_img:
             filters.append(4)
+        if include_height_map:
+            filters.append([256, 32, 32])
+        if include_action_imgs:
+            filters += [8, 8]
         imgs = inputs
-        inputs = [
-            inputs.RGB, inputs.Feature_RGB, inputs.Depth, inputs.Feature_Depth
-        ]
+        inputs = [inputs.RGB, inputs.Depth]
         if include_target_img:
             inputs.append(imgs.Target)
+        if include_height_map:
+            inputs.append(imgs.Height_Map)
+        if include_action_imgs:
+            inputs.append(imgs.Feature_RGB)
+            inputs.append(imgs.Feature_Depth)
         with self._model_variable_scope():
             if self.data_format == 'channels_first':
                 # Convert the inputs from channels_last (NHWC) to channels_first (NCHW).
                 # This provides a large performance boost on GPU. See
                 # https://www.tensorflow.org/performance/performance_guide#data_formats
-                inputs = tf.transpose(a=inputs, perm=[0, 3, 1, 2])
+                for i, img in enumerate(inputs):
+                    inputs[i] = tf.transpose(a=img, perm=[0, 3, 1, 2])
             imgs = []
             for i, f in enumerate(filters):
                 if type(f) is list:

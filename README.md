@@ -11,14 +11,14 @@ pip install -r tensor2robot/requirements.txt
 
 ## Action Image Usage
 ```
-python action_images/action_image.py [-h] [--mode {target,no-target}] [--balance]
-                                     [--data-dir DATA_DIR]
+python action_image.py [-h] [--target] [--balance] [--data-dir]
 
 optional arguments:
-  -h, --help                         show this help message and exit
-  --mode {target,no-target}          determines whether to create target images
-  --balance                          balances positive and negative examples
-  --data-dir DATA_DIR                the directory to find data
+  -h, --help           show this help message and exit
+  --target              determines whether to include a target action image
+  --balance           determines whether to balance positive and negative examples
+  --data-dir           the directory to find data
+
   ```
 The expected format for data in this repository is a directory with sub directories that contain the actual data. Each sub directory has a csv within called 'data.csv' to navigate the data. Example data can be found [here](https://drive.google.com/drive/folders/1zBJdu87r0Avqv1P0hISI9w004spJdMN1?usp=sharing).
 
