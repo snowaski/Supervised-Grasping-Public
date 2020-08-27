@@ -130,7 +130,7 @@ class ActionImageTest(tf.test.TestCase):
 
         data = [[rgbd, points[0], points[1], points[2], points[3], success]]
 
-        imgs, lbls = action.create_dataset(cipm, data, True)
+        imgs, lbls = action.create_dataset(cipm, data, True, True)
 
         imgs = imgs[0]
 
@@ -160,7 +160,7 @@ class ActionImageTest(tf.test.TestCase):
 
         data = [[rgbd, points[0], points[1], points[2], None, success]]
 
-        imgs, lbls = action.create_dataset(cipm, data, True)
+        imgs, lbls = action.create_dataset(cipm, data, True, False)
 
         imgs = imgs[0]
 
@@ -188,7 +188,7 @@ class ActionImageTest(tf.test.TestCase):
 
         data = [[rgbd, points[0], points[1], points[2], points[3], success]]
 
-        imgs, lbls = action.create_dataset(cipm, data, False)
+        imgs, lbls = action.create_dataset(cipm, data, False, False)
 
         imgs = imgs[0]
 
