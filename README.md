@@ -1,6 +1,6 @@
 # Supervised-Grasping
 
-This strategy uses action images and a Resnet model to optimize grasping chess pieces.
+This strategy uses action images and a Resnet model to optimize grasping.
 
 ## Requirements
 
@@ -20,7 +20,7 @@ optional arguments:
   --data-dir           the directory to find data
 
   ```
-The expected format for data in this repository is a directory with sub directories that contain the actual data. Each sub directory has a csv within called 'data.csv' to navigate the data. Example data can be found [here](https://drive.google.com/drive/folders/1zBJdu87r0Avqv1P0hISI9w004spJdMN1?usp=sharing).
+The expected format for data in this repository is a directory with sub directories that contain the actual data. Each sub directory has a csv within called 'data.csv' to navigate the data.
 
 ## Training the Model
 ```
