@@ -249,7 +249,7 @@ def create_dataset(cipm: np.ndarray, data: list,
     Args:
         cipm: the camera intrinsic projection matrix.
         data: a list containg list with rgbd data, 3D points, and the success of the entry.
-        isolate_depth: whether to isolate the chess pieces from the depth image.
+        isolate_depth: whether to isolate objects from the depth image.
         action: whether or not to create feature action images.
 
     Returns:
@@ -405,7 +405,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--isolate-depth",
         action='store_true',
-        help='determines whether to isolate chess pieces from depth image.')
+        help='determines whether to isolate objects from depth image.')
     parser.add_argument("--data-dir",
                         default="data/",
                         help='the directory to find data.')
