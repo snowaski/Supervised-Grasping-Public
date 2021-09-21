@@ -1,6 +1,6 @@
 # Supervised-Grasping
 
-This strategy uses action images and a Resnet model to optimize grasping.
+This repository contains the means to train a model with Action Image inputs. From there, grasps can be sampled and run through the netowrk to determine the grasp that has the most possibilty of success.
 
 ## Requirements
 
